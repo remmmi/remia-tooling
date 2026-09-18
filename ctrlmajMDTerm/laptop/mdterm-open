@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Relaie l'ouverture d'un .md vers un VPS : ssh <host> herdr-open-md <chemin>.
+# Accepte : mdterm:///chemin , file:///chemin , /chemin , suffixe :ligne[:col] tolere.
+# Config : ~/.config/herdr-mdterm/remotes  (lignes : <prefixe-chemin> <host-ssh> <port>)
+set -uo pipefail
+cfg="${HERDR_MDTERM_CONF:-$HOME/.config/herdr-mdterm/remotes}"
+log="$HOME/.cache/herdr-mdterm.log"; mkdir -p "$(dirname "$log")"
+
+arg="${1:-}"
+arg="${arg#mdterm://}"; arg="${arg#file://}"
+arg="$(printf '%s' "$arg" | sed -E 's/:[0-9]+(:[0-9]+)?$//')"
+arg="$(printf '%b' "${arg//%/\\x}")"
+[ -n "$arg" ] || { echo "usage: mdterm-open <chemin|url>" >&2; exit 1; }
+
+host=""; port=""
+while read -r prefix h p _; do
+  [ -z "${prefix:-}" ] || [[ "$prefix" == \#* ]] && continue
+  if [[ "$arg" == "$prefix"* ]]; then host="$h"; port="${p:-22}"; break; fi
+done < "$cfg"
+[ -n "$host" ] || { echo "$(date -u +%FT%TZ) no remote for $arg" >> "$log"; exit 2; }
+
+remote="herdr-open-md $(printf '%q' "$arg")"
+echo "$(date -u +%FT%TZ) -> $host:$port $remote" >> "$log"
+exec ssh -o BatchMode=yes -o ConnectTimeout=8 -p "$port" "$host" "bash -lc $(printf '%q' "$remote")" >>"$log" 2>&1

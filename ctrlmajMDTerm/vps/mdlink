@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Affiche un chemin comme hyperlien OSC8 mdterm:// (cliquable via Ctrl+Maj+clic).
+# Usage: mdlink <fichier.md>
+set -euo pipefail
+[ $# -eq 1 ] || { echo "usage: mdlink <fichier.md>" >&2; exit 1; }
+path="$(realpath "$1")"
+printf '\e]8;;mdterm://%s\e\\%s\e]8;;\e\\\n' "$path" "$path"
