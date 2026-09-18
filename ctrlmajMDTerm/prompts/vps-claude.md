@@ -5,7 +5,7 @@ Tu es le Claude du VPS. Objectif : faire marcher Ctrl+Maj+clic sur un chemin .md
 (y compris dans ta propre sortie) pour ouvrir un tab herdr avec mdterm, depuis un
 laptop attache en `herdr --remote`. Le pack est dans <CHEMIN_DU_PACK> (lis son README.md
 d'abord). Tu geres le VPS ; un AUTRE Claude gere le laptop ; vous coordonnez via le
-skill claude-bridge (copie-le dans ~/.claude/skills/claude-bridge/ s'il manque : bridge/).
+skill claude-bridge (installe-le avec ../claudeBridge/vps/install.sh s il manque).
 
 Regles :
 - Ton pseudo bridge : vps-claude, vps arg = `local`. Tu ne touches JAMAIS au laptop, il

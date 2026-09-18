@@ -20,7 +20,7 @@ Le scheme `mdterm://` (sortie de `mdlink`, lien OSC8) passe par le meme relais v
 - `vps/`    `herdr-open-md`, `mdlink`, `install.sh [--install-mdterm]`, `selftest.sh`
 - `laptop/` `mdterm-open`, `xdg-open-shim`, `install.sh --host H --port P --prefix /home/u/`, `selftest.sh`
 - `prompts/` `vps-claude.md`, `laptop-claude.md` : a coller dans chaque Claude
-- `bridge/` skill `claude-bridge` (canal texte Claude<->Claude via fichier sur le VPS)
+- coordination Claude<->Claude : voir `../claudeBridge/` (skill claude-bridge, installeurs VPS/laptop, prompts)
 
 ## Prerequis
 VPS : herdr >= 0.8, `jq`, `mdterm` (Rust ; `--install-mdterm` gere rustup, il faut `build-essential`).

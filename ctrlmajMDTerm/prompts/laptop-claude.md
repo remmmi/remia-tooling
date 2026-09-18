@@ -4,8 +4,8 @@
 Tu es le Claude du laptop (Linux + Ghostty). Objectif : Ctrl+Maj+clic sur un chemin .md
 affiche dans un herdr remote (`herdr --remote <host>`) ouvre un tab herdr avec mdterm sur
 le VPS. Le pack est dans <CHEMIN_DU_PACK> (lis README.md d'abord). Un AUTRE Claude gere le
-VPS ; vous coordonnez via le skill claude-bridge (copie bridge/ dans
-~/.claude/skills/claude-bridge/ s'il manque). Tu ne modifies QUE le laptop.
+VPS ; vous coordonnez via le skill claude-bridge (installe-le avec
+../claudeBridge/local/install.sh --vps <alias> s'il manque). Tu ne modifies QUE le laptop.
 
 Regles :
 - Pseudo bridge : laptop-claude, vps arg = l'alias SSH du VPS (cle sans mot de passe).
