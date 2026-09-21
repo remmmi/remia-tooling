@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Ouvre un fichier markdown dans un nouveau tab herdr (workspace focus) avec mdterm.
+# Usage: herdr-open-md <fichier.md>    -> imprime l'id du tab cree.
+set -euo pipefail
+export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+
+[ $# -eq 1 ] || { echo "usage: herdr-open-md <fichier.md>" >&2; exit 1; }
+path="$(realpath "$1")"
+[ -f "$path" ] || { echo "herdr-open-md: fichier introuvable: $path" >&2; exit 1; }
+
+ws="$(herdr workspace list | jq -r '.result.workspaces[] | select(.focused==true) | .workspace_id' | head -1)"
+[ -n "$ws" ] || { echo "herdr-open-md: aucun workspace herdr focus (un client herdr est-il attache ?)" >&2; exit 1; }
+
+# Tab cree SANS focus : sinon ce que l'humain est en train de taper atterrit dans le nouveau pane
+# et se melange a la commande (vu pour de vrai : "emdterm: command not found").
+created="$(herdr tab create --workspace "$ws" --cwd "$(dirname "$path")" --label "$(basename "$path")" --no-focus)"
+pane="$(jq -r '.result.root_pane.pane_id // empty' <<<"$created")"
+tab="$(jq -r '.result.tab.tab_id // empty' <<<"$created")"
+[ -n "$pane" ] && [ -n "$tab" ] || { echo "herdr-open-md: creation du tab echouee: $created" >&2; exit 1; }
+
+# exec : le shell du pane est remplace par mdterm, quitter mdterm (q) ferme le tab.
+herdr pane run "$pane" "exec mdterm $(printf '%q' "$path")" >/dev/null
+herdr tab focus "$tab" >/dev/null
+echo "$tab"
