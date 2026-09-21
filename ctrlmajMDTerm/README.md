@@ -1,4 +1,4 @@
-# herdr-mdterm-pack : Ctrl+Maj+clic sur un .md -> tab herdr avec mdterm
+# ctrlmajMDTerm : Ctrl+Maj+clic sur un .md -> tab herdr avec mdterm
 
 Depuis un poste de travail Linux attache a un serveur via `herdr --remote <host>`, un Ctrl+Maj+clic sur
 un chemin `.md` (texte brut, y compris dans la sortie de Claude Code) ouvre un nouveau tab herdr sur le
@@ -11,9 +11,12 @@ Le pack ne suppose aucun nom de machine, d'utilisateur, de port ni de distributi
 Un seul point d'entree, le meme sur toutes les machines :
 
 ```
-tar xzf herdr-mdterm-pack.tar.gz && cd herdr-mdterm-pack
+cd ctrlmajMDTerm
 ./setup.sh
 ```
+
+Le dossier est autonome (`setup.sh`, `lib/`, ce README) : il se copie tel quel sur une autre machine, sous n'importe quel
+nom et a n'importe quel endroit. `setup.sh` trouve `lib/` a cote de lui et n'ecrit rien dans son propre dossier.
 
 Il demande :
 1. **les protagonistes** : chaque machine en jeu, avec son role.
