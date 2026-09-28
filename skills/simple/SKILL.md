@@ -8,6 +8,21 @@ description: >
   "je te suis pas", "redis-moi". N'ajoute JAMAIS de détail : change de registre.
 ---
 
+<!-- PROFIL:DEBUT — rempli à l'installation (voir INSTALL.md), avec l'accord de l'utilisateur -->
+## Profil de l'utilisateur
+
+- **Niveau** : _(non renseigné)_
+- **Stack du projet** : _(non renseignée)_
+- **Ses couches, avec ses mots** : _(non renseignées)_
+<!-- PROFIL:FIN -->
+
+> Si le profil ci-dessus est encore « non renseigné », **proposer** d'abord de le remplir
+> (procédure : `INSTALL.md`, à côté de ce fichier), puis appliquer le protocole. Ne jamais
+> l'écrire sans l'accord de l'utilisateur.
+
+Une fois renseigné, le profil règle le registre : niveau → quels termes définir d'office ;
+stack → d'où tirer le « cas réel nommé » ; couches → le vocabulaire de l'étape 4.
+
 L'utilisateur n'a pas compris le message précédent. La faute est du côté de l'explication,
 pas de sa lecture. La réponse par défaut — répéter en plus détaillé, en plus rigoureux,
 en plus long — **aggrave le problème**.
@@ -36,9 +51,9 @@ Jamais en partant du nom d'une variable interne. `MAX_RETRY_SENTINEL` n'est pas 
 d'entrée ; « le client ne verra jamais ce message d'erreur » en est un.
 
 **4. Le vocabulaire, calé sur ses couches à lui.**
-Repérer les couches dans lesquelles l'utilisateur pense (par exemple : code, template,
-base de données, traduction, configuration, serveur) et dire dans laquelle ça se passe,
-avec ses mots à lui. « C'est dans le code — ni le template, ni la base, ni la traduction. »
+Prendre les couches du profil (à défaut, repérer celles dans lesquelles l'utilisateur pense :
+par exemple code, template, base de données, traduction, configuration, serveur) et dire dans
+laquelle ça se passe, avec ses mots à lui. « C'est dans le code — ni le template, ni la base, ni la traduction. »
 
 ## Interdits pendant /simple
 
