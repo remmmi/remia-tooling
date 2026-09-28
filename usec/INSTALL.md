@@ -13,7 +13,8 @@
 
 ## 2. Installer les fichiers
 
-`./install.sh` (depuis ce dossier) → `~/.local/bin/usec` et `~/.local/share/usec/quota_gate.sh`.
+`./install.sh` (depuis ce dossier) → `~/.local/bin/usec`, `~/.local/bin/usec-watch` et
+`~/.local/share/usec/quota_gate.sh`.
 Si l'installeur signale que `~/.local/bin` n'est pas dans le PATH : ajouter la ligne proposée à
 `~/.profile` (pas `.bashrc`), après accord de l'utilisateur.
 
@@ -25,7 +26,19 @@ proposer de le retirer : il masquerait le script dans le terminal.
 `./selftest.sh` doit finir sur `0 KO`. Puis un vrai `usec` (consomme un appel) : du JSON avec au
 moins une ligne `session`.
 
-## 4. Intégrer la règle dans CLAUDE.md — seulement avec accord
+## 4. Brancher la surveillance (hooks) — seulement avec accord
+
+Expliquer à l'utilisateur : deux hooks (`UserPromptSubmit`, `PostToolUse`) dans le settings.json
+global (`~/.claude/settings.json`) ; ils ne parlent que si un quota est critique ; ~3 appels
+`/usage` par heure d'activité. Signaler les hooks déjà présents (ils sont conservés) : les
+settings peuvent aussi vivre dans `settings.local.json` ou un settings de projet — vérifier les
+trois avant d'affirmer qu'il n'y a pas de doublon.
+
+Avec accord : `./install.sh --hooks --lang <fr|en>` (copie `settings.json.bak-usec` avant écriture ;
+relancer = remplacer, jamais dupliquer). Puis `usec-watch refresh` et `usec-watch status` : un relevé
+doit s'afficher. Les hooks sont lus au démarrage d'une session : effet à la session suivante.
+
+## 5. Intégrer la règle dans CLAUDE.md — seulement avec accord
 
 1. **Quel fichier** : par défaut le CLAUDE.md global de l'utilisateur (`~/.claude/CLAUDE.md`), car
    les quotas sont ceux du compte, pas d'un projet. Autre choix possible : le CLAUDE.md d'un projet,
@@ -39,7 +52,8 @@ moins une ligne `session`.
 5. Si le fichier contient déjà une règle usec **hors marqueurs** (installation ancienne), proposer
    de la supprimer pour ne pas avoir deux versions.
 
-## 5. Confidentialité
+## 6. Confidentialité
 
 Rien de personnel dans ce dépôt : pas de nom, de chemin de projet, de sortie `/usage` réelle au-delà
-des trois lignes de quota de la fixture. Les réglages locaux restent dans la copie installée.
+des trois lignes de quota de la fixture. Les réglages locaux restent dans la copie installée ;
+l'état de usec-watch (`~/.local/state/usec/`) ne contient que des pourcentages et des horodatages.

@@ -1,0 +1,281 @@
+#!/usr/bin/env python3
+"""usec-watch — surveillance silencieuse des quotas Claude, par hook Claude Code.
+
+  usec-watch hook [--lang fr|en]   hook UserPromptSubmit / PostToolUse : lit l'événement sur stdin,
+                                   relance un relevé en arrière-plan s'il est périmé, et ne parle
+                                   (additionalContext) que si un quota est critique ou le sera avant
+                                   son reset au rythme actuel. Sinon : aucune sortie.
+  usec-watch refresh               relevé usec maintenant (bloquant) → dernier relevé + historique
+  usec-watch status [--json]       dernier relevé + projection, sans appel (gratuit)
+
+Réglages (environnement) : USEC_BIN (usec), USEC_WATCH_DIR (~/.local/state/usec),
+USEC_WATCH_TTL (1200 s entre deux relevés), USEC_WATCH_CRIT (85 %), USEC_WATCH_SESSION_GUARD
+(1800 s : une session qui se réinitialise avant ce délai n'est jamais critique),
+USEC_WATCH_REALERT (3600 s avant de répéter la même alerte dans une session).
+"""
+import json
+import os
+import subprocess
+import sys
+import time
+from datetime import datetime
+
+INNER = "USEC_WATCH_INNER"  # posé dans le relevé : le `claude -p` qu'il lance ne se surveille pas
+STATE = os.path.expanduser(os.environ.get("USEC_WATCH_DIR", "~/.local/state/usec"))
+LAST = os.path.join(STATE, "last.json")
+HISTORY = os.path.join(STATE, "history.jsonl")
+LOCK = os.path.join(STATE, "refresh.lock")
+ALERTS = os.path.join(STATE, "alerts.json")
+
+
+def env_num(name, default):
+    try:
+        return float(os.environ.get(name, default))
+    except ValueError:
+        return float(default)
+
+
+TTL = env_num("USEC_WATCH_TTL", 1200)
+CRIT = env_num("USEC_WATCH_CRIT", 85)
+SESSION_GUARD = env_num("USEC_WATCH_SESSION_GUARD", 1800)
+REALERT = env_num("USEC_WATCH_REALERT", 3600)
+WINDOW = 5400        # projection : pente calculée sur les relevés des 90 dernières minutes
+MIN_SPAN = 600       # … couvrant au moins 10 min
+STALE = 7200         # relevé plus vieux : on ne s'en sert pas pour alerter
+KEEP = 8 * 86400     # historique conservé
+
+TEXT = {
+    "fr": {
+        "head": "[usec-watch] Quota Claude critique",
+        "now": "{label} à {used:g} % (reset {reset})",
+        "proj": "au rythme actuel, 100 % vers {eta} (reset {reset})",
+        "ask": ("Préviens l'utilisateur maintenant, en une phrase avec ces chiffres, puis propose : "
+                "différer les tâches lourdes, un modèle moins cher, moins de parallélisme."),
+        "ok": "aucun quota critique",
+        "none": "aucun relevé (lancer : usec-watch refresh)",
+        "age": "relevé d'il y a {m} min",
+    },
+    "en": {
+        "head": "[usec-watch] Critical Claude quota",
+        "now": "{label} at {used:g} % (reset {reset})",
+        "proj": "at the current pace, 100 % around {eta} (reset {reset})",
+        "ask": ("Tell the user now, in one sentence with these numbers, then suggest: postpone "
+                "heavy tasks, a cheaper model, less parallelism."),
+        "ok": "no critical quota",
+        "none": "no reading yet (run: usec-watch refresh)",
+        "age": "reading from {m} min ago",
+    },
+}
+
+
+def read_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except (OSError, ValueError):
+        return default
+
+
+def write_json(path, data):
+    tmp = f"{path}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False)
+    os.replace(tmp, path)
+
+
+def age(path):
+    try:
+        return time.time() - os.path.getmtime(path)
+    except OSError:
+        return float("inf")
+
+
+def label(q):
+    return q["period"] if q["period"] == "session" else f"week ({q['models']})"
+
+
+def fmt_time(ts, lang):
+    return datetime.fromtimestamp(ts).astimezone().strftime("%d/%m %H:%M" if lang == "fr" else "%b %d %H:%M")
+
+
+# ── relevé ────────────────────────────────────────────────────────────────────────────────
+def refresh():
+    os.makedirs(STATE, exist_ok=True)
+    env = dict(os.environ, **{INNER: "1"})
+    try:
+        out = subprocess.run([os.environ.get("USEC_BIN", "usec")], capture_output=True,
+                             text=True, timeout=120, env=env)
+    except (OSError, subprocess.TimeoutExpired):
+        return 1
+    finally:
+        try:
+            os.remove(LOCK)
+        except OSError:
+            pass
+    try:
+        quotas = json.loads(out.stdout)["quotas"]
+    except (ValueError, KeyError, TypeError):
+        return 1
+    now = time.time()
+    write_json(LAST, {"at": now, "quotas": quotas})
+    lines = []
+    try:
+        with open(HISTORY, encoding="utf-8") as fh:
+            lines = [l for l in fh if json.loads(l).get("at", 0) > now - KEEP]
+    except (OSError, ValueError):
+        pass
+    lines.append(json.dumps({"at": now, "quotas": quotas}, ensure_ascii=False) + "\n")
+    tmp = f"{HISTORY}.{os.getpid()}.tmp"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.writelines(lines)
+    os.replace(tmp, HISTORY)
+    return 0
+
+
+def refresh_in_background():
+    """Lance `refresh` détaché si le relevé est périmé et qu'aucun n'est déjà en cours."""
+    if age(LAST) < TTL or age(LOCK) < 180:
+        return
+    os.makedirs(STATE, exist_ok=True)
+    with open(LOCK, "w") as fh:
+        fh.write(str(os.getpid()))
+    subprocess.Popen([sys.executable, os.path.abspath(__file__), "refresh"],
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
+                     stderr=subprocess.DEVNULL, start_new_session=True,
+                     env=dict(os.environ, **{INNER: "1"}))
+
+
+# ── évaluation ────────────────────────────────────────────────────────────────────────────
+def history_points(q, now):
+    pts = []
+    try:
+        with open(HISTORY, encoding="utf-8") as fh:
+            for line in fh:
+                rec = json.loads(line)
+                if rec.get("at", 0) < now - WINDOW:
+                    continue
+                for h in rec.get("quotas", []):
+                    # même fenêtre = même quota ET même reset (sinon la pente traverse un reset)
+                    if (h.get("period"), h.get("models"), h.get("reset_at")) == \
+                            (q["period"], q["models"], q["reset_at"]):
+                        pts.append((rec["at"], float(h["used_percent"])))
+    except (OSError, ValueError, KeyError):
+        pass
+    return sorted(pts)
+
+
+def evaluate(now=None):
+    """Liste des quotas critiques : dicts {key, label, used, reset_ts, eta_ts|None}."""
+    now = now or time.time()
+    last = read_json(LAST, None)
+    if not last or now - last.get("at", 0) > STALE:
+        return []
+    found = []
+    for q in last.get("quotas", []):
+        try:
+            reset_ts = datetime.fromisoformat(q["reset_at"]).timestamp()
+            used = float(q["used_percent"])
+        except (KeyError, ValueError, TypeError):
+            continue
+        remaining = reset_ts - now
+        if remaining <= 0:
+            continue
+        if q["period"] == "session" and remaining < SESSION_GUARD:
+            continue
+        eta = None
+        pts = history_points(q, now)
+        if len(pts) >= 2 and pts[-1][0] - pts[0][0] >= MIN_SPAN:
+            rate = (pts[-1][1] - pts[0][1]) / (pts[-1][0] - pts[0][0])  # % par seconde
+            if rate > 0 and used < 100:
+                t100 = pts[-1][0] + (100 - pts[-1][1]) / rate
+                if t100 < reset_ts:
+                    eta = t100
+        if used >= CRIT or eta is not None:
+            kind = "proj" if used < CRIT else "now"
+            found.append({"key": f"{label(q)}/{kind}", "label": label(q), "used": used,
+                          "reset_ts": reset_ts, "eta_ts": eta})
+    return found
+
+
+def describe(items, lang):
+    t = TEXT[lang]
+    parts = []
+    for it in items:
+        s = t["now"].format(label=it["label"], used=it["used"], reset=fmt_time(it["reset_ts"], lang))
+        if it["eta_ts"]:
+            s += " ; " + t["proj"].format(eta=fmt_time(it["eta_ts"], lang), reset=fmt_time(it["reset_ts"], lang))
+        parts.append(s)
+    return " — ".join(parts)
+
+
+# ── modes ─────────────────────────────────────────────────────────────────────────────────
+def hook(lang):
+    if os.environ.get(INNER):
+        return 0
+    try:
+        event = json.load(sys.stdin)
+    except ValueError:
+        event = {}
+    refresh_in_background()
+    items = evaluate()
+    if not items:
+        return 0
+    # une alerte donnée ne se répète pas avant REALERT dans la même session
+    session = str(event.get("session_id", "?"))
+    alerts = read_json(ALERTS, {})
+    now = time.time()
+    seen = alerts.get(session, {})
+    fresh = [it for it in items if now - seen.get(it["key"], 0) >= REALERT]
+    if not fresh:
+        return 0
+    for it in fresh:
+        seen[it["key"]] = now
+    alerts = {k: v for k, v in alerts.items() if max(v.values(), default=0) > now - 86400}
+    alerts[session] = seen
+    try:
+        write_json(ALERTS, alerts)
+    except OSError:
+        pass
+    t = TEXT[lang]
+    print(json.dumps({"hookSpecificOutput": {
+        "hookEventName": event.get("hook_event_name", "UserPromptSubmit"),
+        "additionalContext": f"{t['head']} : {describe(fresh, lang)}. {t['ask']}",
+    }}, ensure_ascii=False))
+    return 0
+
+
+def status(lang, as_json):
+    t = TEXT[lang]
+    last = read_json(LAST, None)
+    items = evaluate()
+    if as_json:
+        print(json.dumps({"last": last, "critical": items}, ensure_ascii=False, indent=2))
+        return 0
+    if not last:
+        print(t["none"])
+        return 0
+    print(t["age"].format(m=int((time.time() - last["at"]) // 60)))
+    for q in last["quotas"]:
+        print(f"  {label(q)}: {q['used_percent']:g} % — reset {q['reset_at']}")
+    print(describe(items, lang) if items else t["ok"])
+    return 0
+
+
+def main(argv):
+    lang = "en" if "--lang" in argv and argv[argv.index("--lang") + 1:][:1] == ["en"] else "fr"
+    mode = argv[1] if len(argv) > 1 else ""
+    if mode == "hook":
+        try:
+            return hook(lang)
+        except Exception:  # un hook ne doit jamais gêner la session
+            return 0
+    if mode == "refresh":
+        return refresh()
+    if mode == "status":
+        return status(lang, "--json" in argv)
+    print(__doc__.strip())
+    return 0 if mode in ("-h", "--help") else 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))

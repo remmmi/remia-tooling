@@ -1,15 +1,16 @@
 <!-- usec:start — block managed by remia-tooling/usec, replaced on every update -->
-## Subscription quotas: `usec`
+## Subscription quotas: silent watch
 
-`usec` (shell, ~5-20 s) prints Claude quotas as JSON: `quotas[]` with `period` (`session` =
-rolling 5-hour window, `week`), `models`, `used_percent`, `reset_at`.
+A hook (`usec-watch`) reads Claude quotas in the background (~every 20 min of activity) and
+projects consumption at the current pace. It stays silent while everything is fine.
 
-- **When to read it**: at task boundaries, before starting a heavy task (chain of `claude -p`,
-  many subagents, batch/drain), and every ~20 units during a long batch. Not in a loop, not on
-  every message: each read costs a call.
-- **Thresholds**: above ~85 % on the relevant period, postpone or switch to a cheaper model.
-  Big batch ahead and session > ~60 %: wait for the session `reset_at` rather than starting.
-  Tell the user, with the numbers; do not decide silently.
+- **`[usec-watch]` alert received**: tell the user right away, in one sentence with the numbers,
+  and suggest: postpone heavy tasks, a cheaper model, less parallelism.
+- **Otherwise, at your judgment**: after a heavy step, or before starting one (chain of
+  `claude -p`, many subagents, batch), read `usec-watch status` — free, last reading + projection.
+  `usec` forces a fresh reading (costs a call). Say nothing if nothing is critical.
+- **Critical** = session or week ≥ 85 %, or 100 % reached before the reset at the current pace
+  (a session resetting in under 30 min does not count).
 - **Automated scripts**: source `~/.local/share/usec/quota_gate.sh` and call `usec_gate` before
   each `claude -p` (clean pause at the threshold, identical restart after the reset).
 - A quota failure looks like a model failure (rc 1): check the call duration — 3 failures in a

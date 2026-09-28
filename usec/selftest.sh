@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 # Autotest de usec, sans réseau ni quota consommé (fixture). `--live` ajoute un vrai appel à usec.
+# Aucun état réel touché : usec-watch travaille dans un dossier temporaire (USEC_WATCH_DIR).
 set -uo pipefail
 HERE=$(cd "$(dirname "$0")" && pwd)
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
@@ -34,7 +35,65 @@ check "install : script et porte copiés"      "[ -x '$T/home/bin/usec' ] && [ -
 check "install : un seul bloc après 2 passes" "[ \$(grep -c 'usec:start' '$T/CLAUDE.md') -eq 1 ]"
 check "install : contenu existant conservé"   "grep -q 'Règle existante.' '$T/CLAUDE.md'"
 
-# 4. appel réel (optionnel : consomme un appel)
+# 4. usec-watch : état construit à la main (W = dossier d'état, mk = relevé + historique)
+W="$T/watch"; export USEC_WATCH_DIR="$W"
+mk() {  # mk '<quotas json>' [âge du relevé en s] ['<historique: [[il_y_a_s, used], …]>']
+  rm -rf "$W"; mkdir -p "$W"
+  python3 - "$W" "$1" "${2:-0}" "${3:-[]}" <<'EOF_MK'
+import json, sys, time
+from datetime import datetime, timedelta
+w, quotas, age, hist = sys.argv[1], json.loads(sys.argv[2]), float(sys.argv[3]), json.loads(sys.argv[4])
+now = time.time()
+for q in quotas:  # "reset_in" (s) → reset_at ISO
+    q["reset_at"] = (datetime.now().astimezone() + timedelta(seconds=q.pop("reset_in"))).isoformat(timespec="seconds")
+    q.setdefault("models", "all models"); q.setdefault("timezone", "UTC")
+json.dump({"at": now - age, "quotas": quotas}, open(f"{w}/last.json", "w"))
+with open(f"{w}/history.jsonl", "w") as fh:
+    for ago, used in hist:
+        fh.write(json.dumps({"at": now - ago, "quotas": [dict(quotas[0], used_percent=used)]}) + "\n")
+EOF_MK
+}
+hk() { printf '{"session_id":"%s","hook_event_name":"%s"}' "${1:-s1}" "${2:-UserPromptSubmit}" \
+         | USEC_BIN=/bin/false "$HERE/usec-watch" hook --lang fr; }
+LOW='[{"period":"session","used_percent":20,"reset_in":9000},{"period":"week","used_percent":40,"reset_in":200000}]'
+WEEK90='[{"period":"week","used_percent":90,"reset_in":80000}]'
+
+rm -rf "$W"
+check "watch : status sans relevé"             "'$HERE/usec-watch' status | grep -q 'aucun relevé'"
+mk "$LOW"
+check "watch : tout va bien → silence"         "[ -z \"\$(hk)\" ]"
+mk "$WEEK90"
+check "watch : semaine 90 % → alerte"          "hk | grep -q 'week (all models) à 90 %'"
+check "watch : même session → pas de répétition" "[ -z \"\$(hk)\" ]"
+check "watch : autre session → alerte"         "hk s2 | grep -q 'additionalContext'"
+check "watch : hookEventName suit l'événement" "hk s3 PostToolUse | grep -q '\"hookEventName\": \"PostToolUse\"'"
+mk '[{"period":"session","used_percent":95,"reset_in":600}]'
+check "watch : session qui se réinitialise < 30 min → silence" "[ -z \"\$(hk)\" ]"
+mk "$WEEK90" 10800
+check "watch : relevé de plus de 2 h → silence" "[ -z \"\$(hk)\" ]"
+mk '[{"period":"session","used_percent":70,"reset_in":10800}]' 0 '[[1200, 60], [0, 70]]'
+check "watch : 70 % mais 100 % avant le reset → alerte projetée" "hk | grep -q 'au rythme actuel, 100 %'"
+mk '[{"period":"session","used_percent":70,"reset_in":10800}]' 0 '[[1200, 69], [0, 70]]'
+check "watch : pente lente → silence"          "[ -z \"\$(hk)\" ]"
+mk "$WEEK90"
+check "watch : USEC_WATCH_INNER → silence"     "[ -z \"\$(printf '{}' | USEC_WATCH_INNER=1 '$HERE/usec-watch' hook)\" ]"
+rm -rf "$W"
+printf '{}' | USEC_BIN="$T/fake_usec" "$HERE/usec-watch" hook >/dev/null
+for _ in $(seq 50); do [ -s "$W/last.json" ] && break; sleep 0.1; done
+check "watch : relevé périmé → rafraîchi en arrière-plan" "[ -s '$W/last.json' ] && grep -q session '$W/history.jsonl'"
+check "watch : status lit le relevé"           "'$HERE/usec-watch' status | grep -q 'session: 42 %'"
+unset USEC_WATCH_DIR
+
+# 5. installeur : hooks fusionnés sans toucher aux existants, idempotent
+printf '{"model":"x","hooks":{"UserPromptSubmit":[{"hooks":[{"type":"command","command":"autre-hook"}]}]}}' > "$T/settings.json"
+for _ in 1 2; do HOME="$T/home" "$HERE/install.sh" --bin "$T/home/bin" --hooks "$T/settings.json" >/dev/null 2>&1; done
+check "hooks : 1 entrée usec-watch par événement, hook existant et réglages gardés" \
+  "python3 -c 'import json,sys; d=json.load(open(\"$T/settings.json\")); h=d[\"hooks\"]
+n=lambda e: sum(\"usec-watch\" in x[\"command\"] for g in h[e] for x in g[\"hooks\"])
+sys.exit(not (n(\"UserPromptSubmit\")==1 and n(\"PostToolUse\")==1 and \"autre-hook\" in json.dumps(h) and d[\"model\"]==\"x\"))'"
+check "hooks : sauvegarde .bak-usec"           "[ -s '$T/settings.json.bak-usec' ]"
+
+# 6. appel réel (optionnel : consomme un appel)
 if [ "${1:-}" = "--live" ]; then
   check "live : usec rend du JSON" "usec | python3 -c 'import json,sys; json.load(sys.stdin)[\"quotas\"][0]'"
 fi
