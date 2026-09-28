@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+# usec — quotas de l'abonnement Claude (fenêtre de session, semaine, semaine par modèle) en JSON.
+# Appelle `claude -p "/usage"` et parse la sortie. Script autonome : marche depuis un shell
+# non interactif (préfixe ! de Claude Code, cron, sous-processus) — contrairement à un alias.
+#
+#   usec            → JSON {"quotas": [{period, models, used_percent, reset_at, timezone}, …]}
+#   usec --stdin    → parse une sortie de /usage lue sur l'entrée standard (tests, fixtures)
+#   usec --raw      → sortie brute de /usage, sans parsing
+#
+# Code retour : 0 = JSON valide ; 1 = sortie non reconnue (format changé, pas d'abonnement…).
+set -o pipefail
+
+case "${1:-}" in
+  -h|--help) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+  --raw)     exec claude -p "/usage" ;;
+  --stdin)   source_cmd=(cat) ;;
+  "")        source_cmd=(claude -p "/usage") ;;
+  *)         echo "usec : argument inconnu : $1 (voir --help)" >&2; exit 2 ;;
+esac
+
+"${source_cmd[@]}" | python3 -c '
+import json
+import re
+import sys
+from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
+
+MONTHS = {
+    name: number
+    for number, name in enumerate(
+        "Jan Feb Mar Apr May Jun Jul Aug Sep Oct Nov Dec".split(), 1
+    )
+}
+
+def parse_reset(value, timezone):
+    # Formes vues : "Sep 29, 2:20am", "Sep 30, 12am" ; tolère aussi "2:20am" (sans date).
+    match = re.fullmatch(
+        r"(?:([A-Za-z]{3})\s+(\d{1,2}),\s*)?"
+        r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)",
+        value.strip(),
+        re.IGNORECASE,
+    )
+    if not match:
+        raise ValueError(f"Date non reconnue : {value!r}")
+
+    month, day, hour, minute, period = match.groups()
+    hour = int(hour)
+    if not 1 <= hour <= 12:
+        raise ValueError(f"Heure invalide : {value!r}")
+    hour = hour % 12 + (12 if period.lower() == "pm" else 0)
+    tz = ZoneInfo(timezone)
+    now = datetime.now(tz)
+
+    if month is None:
+        # Heure seule : prochaine occurrence.
+        reset = now.replace(hour=hour, minute=int(minute or 0), second=0, microsecond=0)
+        if reset < now:
+            reset += timedelta(days=1)
+        return reset.isoformat(timespec="seconds")
+
+    # La sortie ne donne pas l année : retenir la date la plus proche de maintenant.
+    candidates = []
+    for year in (now.year - 1, now.year, now.year + 1):
+        try:
+            candidates.append(datetime(
+                year, MONTHS[month.title()], int(day),
+                hour, int(minute or 0), tzinfo=tz,
+            ))
+        except ValueError:
+            continue
+    if not candidates:
+        raise ValueError(f"Date invalide : {value!r}")
+    reset = min(candidates, key=lambda c: abs(c.timestamp() - now.timestamp()))
+    return reset.isoformat(timespec="seconds")
+
+pattern = re.compile(
+    r"^Current (session|week \(([^)]+)\)):\s*"
+    r"(\d+(?:\.\d+)?)% used\s*·\s*resets\s+"
+    r"(.+?)\s+\(([^)]+)\)\s*$",
+    re.MULTILINE,
+)
+
+try:
+    quotas = []
+    for match in pattern.finditer(sys.stdin.read()):
+        label, model, used, reset, timezone = match.groups()
+        quotas.append({
+            "period": "session" if label == "session" else "week",
+            "models": model or "all models",
+            "used_percent": float(used),
+            "reset_at": parse_reset(reset, timezone),
+            "timezone": timezone,
+        })
+
+    # Le nombre de lignes dépend de l offre (semaine par modèle ou non) : au moins une exigée.
+    if not quotas:
+        raise ValueError(
+            "aucun quota trouvé dans la sortie de /usage "
+            "(format changé ? pas d abonnement ? voir usec --raw)"
+        )
+
+    json.dump({"quotas": quotas}, sys.stdout, ensure_ascii=False, indent=2)
+    print()
+
+except (ValueError, KeyError) as error:
+    print(f"usec : {error}", file=sys.stderr)
+    sys.exit(1)
+'
