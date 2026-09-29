@@ -13,7 +13,7 @@ Tu es le **pilote**. Tu ne lis, n'ecris ni ne corriges jamais un texte a transfo
 - un **verificateur**, different du redacteur : il recoit la consigne de passe inverse (`inverse-brief`), qui ne montre que la source et la cible, jamais la carte du redacteur ;
 - une **correction** est une nouvelle consigne (`brief` la produit tout seul quand la variante echoue au controle) confiee a un nouvel agent isole.
 
-Lancement d'un agent isole, toujours avec ce texte et rien d'autre (outil Agent, type general-purpose, jamais un fork de toi-meme) :
+Lancement d'un agent isole, toujours avec ce texte et rien d'autre (outil Agent, type general-purpose, parametre `model: "fable"` quel que soit le modele de ta session, jamais un fork de toi-meme) :
 
 > Lis le fichier `<chemin de la consigne>` et applique-le a la lettre. N'ouvre aucun autre fichier. Reponds seulement "fait".
 
