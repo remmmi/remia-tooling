@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, existsSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { join, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -66,11 +66,21 @@ test('CLI : check --inverse fusionne une carte produite a part', () => {
   assert.equal(spawnSync('node', [CLI, 'check', join(FX, 'site-web.input.json'), join(dir, 'r.json'), '--inverse', join(dir, 'inv.json')]).status, 0);
 });
 
-test('CLI : inverse ne montre que source et cible, pas la carte directe', () => {
-  const out = execFileSync('node', [CLI, 'inverse', join(FX, 'site-web.input.json'), join(FX, 'site-web.result.json')], { encoding: 'utf8' });
-  assert.match(out, /## methode\.corps/);
-  assert.doesNotMatch(out, /## h1/);
-  assert.doesNotMatch(out, /concept/);
+test('inverse-brief : source et cible seulement, jamais la carte directe du redacteur', () => {
+  const r = structuredClone(good);
+  delete r.inverse;
+  const dir = runDir(r);
+  execFileSync('node', [CLI, 'inverse-brief', dir]);
+  const b = readFileSync(join(dir, 'inverse-brief-a.md'), 'utf8');
+  assert.match(b, /Tu es un agent isole/);
+  assert.ok(b.includes(join(dir, 'inverse-a.json')));
+  assert.match(b, /## methode\.corps/);
+  assert.doesNotMatch(b, /## h1/);
+  assert.doesNotMatch(b, /concept/);
+  assert.doesNotMatch(b, /"motif"/);
+  assert.equal(spawnSync('node', [CLI, 'check', dir]).status, 1, 'sans carte inverse : bloque');
+  writeFileSync(join(dir, 'inverse-a.json'), JSON.stringify({ inverse: good.inverse }));
+  assert.equal(spawnSync('node', [CLI, 'check', dir]).status, 0);
 });
 
 test('--previous : retrait motive puis reintroduit = erreur, perte reparee = ok', () => {
@@ -90,7 +100,7 @@ test('--previous : retrait motive puis reintroduit = erreur, perte reparee = ok'
 });
 
 test('report : section Decisions separe retraits voulus et ajouts', () => {
-  const md = execFileSync('node', [CLI, 'report', join(FX, 'site-web.input.json'), join(FX, 'site-web.result.json')], { encoding: 'utf8' });
+  const md = execFileSync('node', [CLI, 'report', runDir(good)], { encoding: 'utf8' });
   assert.match(md, /## Decisions : variante a/);
   assert.match(md, /Retraits voulus par le prisme[\s\S]*il n'est pas parfait/);
   assert.match(md, /Ajouts absents de la source[\s\S]*décrits plus bas/);
@@ -132,23 +142,73 @@ test('CLI : codes de sortie', () => {
   assert.equal(spawnSync('node', [CLI, 'inconnue']).status, 2);
 });
 
-test('CLI : prompt contient consigne, contraintes et segments', () => {
-  const out = execFileSync('node', [CLI, 'prompt', join(ROOT, 'prisms', 'copywriter-b2b.md'), join(FX, 'site-web.input.json'), '--variant', 'b'], { encoding: 'utf8' });
-  assert.match(out, /PRÉSERVER LE FOND/);
-  assert.match(out, /Tokens proteges/);
-  assert.match(out, /### offre\.cartes\.3\.texte/);
-  assert.match(out, /"variant": "b"/);
+function runDir(result) {
+  const dir = mkdtempSync(join(tmpdir(), 'prismtext-run-'));
+  const inp = structuredClone(input);
+  inp.context.rendu = 'Site web et boutique en ligne\nCe que je fais\nTEXTE-DU-GABARIT-VISIBLE';
+  writeFileSync(join(dir, 'input.json'), JSON.stringify(inp));
+  if (result) writeFileSync(join(dir, 'result-a.json'), JSON.stringify(result));
+  return dir;
+}
+const PRISM = join(ROOT, 'prisms', 'copywriter-b2b.md');
+
+test('brief : consigne autonome (cadre isole, prisme, page rendue, segments, destination)', () => {
+  const dir = runDir();
+  const out = execFileSync('node', [CLI, 'brief', PRISM, dir, '--variant', 'b'], { encoding: 'utf8' });
+  assert.match(out, /^redaction : .*brief-b\.md\necrit par l agent : .*result-b\.json/);
+  const b = readFileSync(join(dir, 'brief-b.md'), 'utf8');
+  assert.match(b, /Tu es un agent isole/);
+  assert.match(b, /n'ouvre aucun autre fichier/);
+  assert.ok(b.includes(join(dir, 'result-b.json')), 'la consigne porte son chemin de sortie');
+  assert.match(b, /PRÉSERVER LE FOND/);
+  assert.match(b, /TEXTE-DU-GABARIT-VISIBLE/);
+  assert.match(b, /### offre\.cartes\.3\.texte/);
+  assert.match(b, /### h1 \{"freeze":true\}/, 'les segments geles sont montres pour le sens');
+  assert.doesNotMatch(b, /- rendu :/, 'la page rendue n est pas dupliquee dans le contexte');
 });
 
-test('CLI : chain refuse un result non conforme, accepte un conforme', () => {
-  assert.equal(spawnSync('node', [CLI, 'chain', join(FX, 'site-web.input.json'), join(FX, 'site-web.result-casse.json')]).status, 1);
-  const next = JSON.parse(execFileSync('node', [CLI, 'chain', join(FX, 'site-web.input.json'), join(FX, 'site-web.result.json')], { encoding: 'utf8' }));
+test('brief : variante non conforme -> consigne de correction, version archivee, erreurs listees', () => {
+  const dir = runDir(load('site-web.result-casse.json'));
+  const out = execFileSync('node', [CLI, 'brief', PRISM, dir], { encoding: 'utf8' });
+  assert.match(out, /^correction 1 :/);
+  assert.ok(existsSync(join(dir, 'result-a.r1.json')));
+  assert.ok(!existsSync(join(dir, 'result-a.json')), 'la variante fautive est archivee, pas ecrasee');
+  const b = readFileSync(join(dir, 'brief-a.md'), 'utf8');
+  assert.match(b, /## Erreurs a corriger/);
+  assert.match(b, /chiffre-invente/);
+  assert.match(b, /Ne retablis JAMAIS une idee que le prisme a retiree/);
+  writeFileSync(join(dir, 'result-a.json'), readFileSync(join(FX, 'site-web.result.json')));
+  assert.equal(spawnSync('node', [CLI, 'check', dir]).status, 0);
+  assert.equal(spawnSync('node', [CLI, 'brief', PRISM, dir]).status, 1, 'rien a corriger sur une variante conforme');
+});
+
+test('brief : une correction qui reintroduit un retrait motive est bloquee', () => {
+  const dir = runDir(good);
+  const annule = structuredClone(good);
+  const c = annule.concepts.find((x) => x.concept === "il n'est pas parfait");
+  c.cible = 'Ce site en est un exemple.';
+  delete c.motif;
+  writeFileSync(join(dir, 'result-a.r1.json'), JSON.stringify(good));
+  writeFileSync(join(dir, 'result-a.json'), JSON.stringify(annule));
+  const out = spawnSync('node', [CLI, 'check', dir], { encoding: 'utf8' });
+  assert.equal(out.status, 1);
+  assert.match(out.stdout, /retrait-annule/);
+});
+
+test('chain : refuse une variante non conforme, prepare l input suivant sinon', () => {
+  const bad = runDir(load('site-web.result-casse.json'));
+  assert.equal(spawnSync('node', [CLI, 'chain', bad, 'a', join(bad, 'suite')]).status, 1);
+  const dir = runDir(good);
+  execFileSync('node', [CLI, 'chain', dir, 'a', join(dir, 'suite')]);
+  const next = JSON.parse(readFileSync(join(dir, 'suite', 'input.json'), 'utf8'));
   assert.equal(next.lineage.length, 1);
-  assert.equal(next.segments.find((s) => s.id === 'chapo').text, good.segments.find((s) => s.id === 'chapo').text);
+  assert.equal(next.segments.find((x) => x.id === 'chapo').text, good.segments.find((x) => x.id === 'chapo').text);
 });
 
-test('CLI : report produit les variantes cote a cote', () => {
-  const md = execFileSync('node', [CLI, 'report', join(FX, 'site-web.input.json'), join(FX, 'site-web.result.json'), join(FX, 'site-web.result-casse.json')], { encoding: 'utf8' });
+test('report : variantes cote a cote depuis le dossier de run', () => {
+  const dir = runDir(good);
+  writeFileSync(join(dir, 'result-casse.json'), readFileSync(join(FX, 'site-web.result-casse.json')));
+  const md = execFileSync('node', [CLI, 'report', dir], { encoding: 'utf8' });
   assert.match(md, /\*\*Variante a\*\*/);
   assert.match(md, /\*\*Variante casse\*\*/);
   assert.match(md, /\[ERROR\] chiffre-invente/);

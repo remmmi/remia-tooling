@@ -24,9 +24,9 @@ commandes et les codes de sortie.
 ## Ce qui est dans le depot, et ce qui n'y est pas
 
 - `engine/` : le moteur, Node sans dependance. Deterministe : il ne fait
-  appel a aucun LLM. Commandes : `describe`, `validate`, `prism`, `prompt`,
-  `inverse`, `check`, `report`, `chain`, `run`, `lot`, `lot-status`,
-  `lot-report`, `decide`, `applied`, `selftest`.
+  appel a aucun LLM. `prismtext describe` liste les commandes. Il travaille
+  sur des dossiers de run (un par item : input, consignes, versions de la
+  variante, cartes inverses, controles, decision) et des lots de dossiers.
 - `contract/` : schemas JSON de l'input (produit par un adaptateur), du result
   (produit par le LLM, une variante) et de la config d'un projet hote. Le
   contrat est versionne (`"prismtext": "1"`) ; tout changement incompatible
@@ -43,10 +43,18 @@ commandes et les codes de sortie.
 
 ## Invariants a ne pas casser
 
-- Le moteur n'appelle aucun reseau et aucun LLM. La seule etape non
-  deterministe est l'ecriture d'un result ; elle est isolee derriere la
-  commande `prompt`, ce qui permet de la confier a Claude (skill) ou plus tard
-  a un runner API, sans toucher au reste.
+- Le moteur n'appelle aucun reseau et aucun LLM. Les seules etapes non
+  deterministes (redaction, correction, verification inverse) sont des
+  consignes autonomes ecrites sur le disque (`brief`, `inverse-brief`) :
+  elles se confient a un agent isole (skill) ou plus tard a un runner API,
+  sans toucher au reste.
+- Separation des contextes : le pilote ne lit jamais un texte a
+  transformer ; chaque consigne contient tout ce qu'il faut (prisme, contexte,
+  page rendue, tous les segments de l'item, chemin de sortie) et interdit
+  d'ouvrir autre chose. Un redacteur ne verifie jamais son propre texte.
+- Coherence : l'unite est l'item entier. Un seul agent ecrit tous les
+  segments d'un item, en voyant les segments geles et `context.rendu`
+  (le texte visible complet, gabarit compris).
 - Un concept source perdu sans `motif` est une erreur bloquante. Un concept
   retire avec `motif` est une alerte presentee a l'humain. Une citation `cible`
   introuvable dans le texte cible est une erreur : c'est le garde-fou contre

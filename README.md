@@ -50,12 +50,15 @@ peut vivre dans le depot (partage) ou dans `.prismtext/prisms/` d'un projet.
 
 ```
 source reelle --[adaptateur: extract]--> input.json
-input.json + prisme --[moteur: prompt]--> consigne --[LLM]--> result.json
-input.json + result.json --[moteur: inverse]--> consigne --[verificateur]--> inverse.json
-input.json + result.json + inverse.json --[moteur: check, report]--> rapport --[humain]--> choix
+input.json + prisme --[moteur: brief]--> consigne autonome --[agent redacteur isole]--> result.json
+input.json + result.json --[moteur: inverse-brief]--> consigne --[agent verificateur isole]--> inverse.json
+dossier de run --[moteur: check]--> en echec : brief ecrit une consigne de correction, on reprend
+dossier de run --[moteur: report, lot-report]--> rapport --[humain: decide]--> choix
 result.json choisi --[adaptateur: preview / apply / verify]--> source reelle
 ```
 
-Le moteur (`engine/`, Node >= 18, sans dependance) ne connait que le contrat
+Chaque agent ne recoit qu'un fichier de consigne : la page entiere (segments
+et texte visible du gabarit), jamais la conversation qui pilote. Le moteur
+(`engine/`, Node >= 18, sans dependance) ne connait que le contrat
 JSON (`contract/`). Les adaptateurs appartiennent au projet hote. Details pour
 un agent : `CLAUDE.md`.

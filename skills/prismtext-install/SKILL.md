@@ -39,7 +39,10 @@ Chaque question porte une option recommandee, deduite de l'etape 2. A couvrir :
 ## 4. Ecrire les adaptateurs
 
 Dans `.prismtext/adapters/<nom>/`. Pars de `<PRISMTEXT_HOME>/adapters/reference-files/adapter.mjs` : meme interface, meme sobriete. Regles :
+- l'unite est l'**item entier** (une page, une fiche, un email), jamais un fragment : un seul input par item ;
 - `extract` produit un input valide (`prismtext validate`) ; les segments non editables (titres imposes, balises, metadonnees) sont `freeze`, pas omis ;
+- `extract` remplit `context.rendu` avec le texte visible de l'item entier tel que le lecteur le voit (page publiee ou construite, gabarit compris, dans l'ordre de lecture) : c'est ce qui permet au redacteur isole de rester coherent avec le texte qu'il ne peut pas modifier ;
+- tout texte visible de l'item doit etre soit un segment, soit present dans `context.rendu` : faire l'inventaire du texte code en dur (gabarits, composants, scripts) avant d'ecrire l'adaptateur, et proposer a l'utilisateur de sortir du code celui qui doit pouvoir etre reecrit ;
 - les `id` de segments sont stables d'une extraction a l'autre (chemin de cle, numero de paragraphe), sinon `apply` ecrit au mauvais endroit ;
 - `apply` refuse un result auquel il manque un segment, et ne touche rien d'autre que les segments ;
 - `preview` ne modifie jamais la source ;

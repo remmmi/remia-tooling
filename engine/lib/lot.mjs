@@ -6,7 +6,7 @@
 
 import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { check } from './checks.mjs';
+import { runCheck } from './run.mjs';
 
 export function slug(ref) {
   return ref.replace(/\.[a-z]+$/i, '').replace(/[^a-zA-Z0-9]+/g, '-').replace(/^-|-$/g, '').toLowerCase();
@@ -57,19 +57,15 @@ export function lotStatus(lotDir) {
     const st = sourceState(dir);
     const checks = [];
     if (st.input) {
-      const input = readJson(join(dir, 'input.json'));
       for (const v of st.variants) {
-        const result = readJson(join(dir, `result-${v.variant}.json`));
-        if (existsSync(join(dir, `inverse-${v.variant}.json`))) {
-          const inv = readJson(join(dir, `inverse-${v.variant}.json`));
-          result.inverse = Array.isArray(inv) ? inv : inv.inverse;
-        }
-        const c = check(input, result);
+        const c = runCheck(dir, v.variant);
         const count = (codes) => c.issues.filter((i) => codes.includes(i.code)).length;
+        const r = readJson(join(dir, `result-${v.variant}.json`));
         checks.push({
           variant: v.variant,
-          prism: `${result.prism.id}@${result.prism.version}`,
+          prism: `${r.prism.id}@${r.prism.version}`,
           ok: c.ok,
+          round: c.round,
           errors: c.errors,
           warnings: c.warnings,
           retraits: count(['concept-retire']),
