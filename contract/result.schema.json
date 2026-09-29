@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "prismtext/result/1",
+  "title": "PrismText result (produit par le LLM, une variante)",
+  "type": "object",
+  "required": ["prismtext", "prism", "variant", "segments", "concepts"],
+  "properties": {
+    "prismtext": { "const": "1" },
+    "prism": {
+      "type": "object",
+      "required": ["id", "version", "sha256"],
+      "description": "tampon recopie de `prismtext prism <fichier>`"
+    },
+    "variant": { "type": "string", "minLength": 1 },
+    "segments": {
+      "type": "array",
+      "items": { "type": "object", "required": ["id", "text"], "properties": { "id": { "type": "string" }, "text": { "type": "string" } } }
+    },
+    "concepts": {
+      "type": "array",
+      "description": "carte source -> cible ; cible = citation exacte du segment cible, ou null avec motif",
+      "items": {
+        "type": "object",
+        "required": ["segment", "concept", "cible"],
+        "properties": {
+          "segment": { "type": "string" },
+          "concept": { "type": "string" },
+          "cible": { "type": ["string", "null"] },
+          "motif": { "type": "string" }
+        }
+      }
+    },
+    "ajouts": {
+      "type": "array",
+      "items": { "type": "object", "properties": { "segment": { "type": "string" }, "texte": { "type": "string" } } }
+    }
+  }
+}

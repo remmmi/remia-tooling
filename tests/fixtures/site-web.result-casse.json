@@ -1,0 +1,289 @@
+{
+  "prismtext": "1",
+  "prism": {
+    "id": "copywriter-b2b",
+    "version": "1.0.0",
+    "sha256": "55397cb170587c8082e9d178e1870e388f00f1ba00bdfec36156ab20ab230234"
+  },
+  "variant": "casse",
+  "segments": [
+    {
+      "id": "seo.title",
+      "text": "Création ou reprise de site web et boutique en ligne (05)"
+    },
+    {
+      "id": "seo.description",
+      "text": "Création ou reprise de votre site et boutique en ligne (PrestaShop, WordPress, sur mesure) dans les Hautes-Alpes. Textes préparés avec l'IA, prix ferme."
+    },
+    {
+      "id": "jsonLdDescription",
+      "text": "Création et reprise de sites web et de boutiques en ligne, connexions entre outils et sources de données, dans les Hautes-Alpes."
+    },
+    {
+      "id": "h1",
+      "text": "Site web et boutique en ligne : création, reprise, connexions"
+    },
+    {
+      "id": "chapo",
+      "text": "Avant l'automatisation, j'ai construit et fait fonctionner des sites vitrines, des boutiques en ligne, des serveurs et des messageries pour de petites structures. C'est mon métier d'origine, et c'est souvent par là qu'un projet commence. Ma part est technique : installer, relier, reprendre. Les textes et les visuels se préparent aujourd'hui avec d'autres moyens, décrits plus bas."
+    },
+    {
+      "id": "offre.titre",
+      "text": "Ce que je fais"
+    },
+    {
+      "id": "offre.cartes.0.titre",
+      "text": "Boutique en ligne"
+    },
+    {
+      "id": "offre.cartes.0.texte",
+      "text": "PrestaShop, WordPress avec WooCommerce, ou un outil plus léger si votre catalogue compte peu de références. Le choix dépend de vos produits et de votre façon de travailler. Si votre boutique actuelle vous convient, je la conserve et je pars de ce qui existe."
+    },
+    {
+      "id": "offre.cartes.1.titre",
+      "text": "Ce qui tourne autour de la boutique"
+    },
+    {
+      "id": "offre.cartes.1.texte",
+      "text": "Le temps passe surtout dans les tâches qui entourent la boutique : stocks recopiés, commandes ressaisies, fiches produits, étiquettes transporteur, factures. Ces enchaînements peuvent s'[automatiser](automatisation) en conservant vos outils actuels."
+    },
+    {
+      "id": "offre.cartes.2.titre",
+      "text": "Reprise d'un site existant"
+    },
+    {
+      "id": "offre.cartes.2.texte",
+      "text": "Un site que personne n'ose plus modifier, un prestataire qui a cessé de répondre, des mises à jour repoussées depuis deux ans. Je reprends la main, je documente ce qui est en place et je remets le site en état de fonctionner. Vous récupérez l'ensemble des accès."
+    },
+    {
+      "id": "offre.cartes.3.titre",
+      "text": "Connexions et données"
+    },
+    {
+      "id": "offre.cartes.3.texte",
+      "text": "Relier deux outils qui n'échangent pas leurs données, importer un fichier fournisseur, exporter vers votre comptable, nettoyer et croiser des données. Une bonne part du travail sur un site porte sur ce qui y entre et ce qui en sort."
+    },
+    {
+      "id": "contenu.titre",
+      "text": "Et les textes, les visuels ?"
+    },
+    {
+      "id": "contenu.corps",
+      "text": "La rédaction et le graphisme ne sont pas mon métier. L'IA permet aujourd'hui de produire en quelques heures des textes adaptés à votre ton, vos produits et vos villes, ainsi que des visuels simples : schémas, pictogrammes, bandeaux. Je n'utilise pas de fausses photos. Rien n'est publié sans votre relecture."
+    },
+    {
+      "id": "contenu.preuve",
+      "text": "Ce site en est un exemple. Textes, plans techniques et calculateur compris, il a demandé ==une vingtaine d'heures== de travail, contre une centaine, soit 80 % de moins avec les méthodes précédentes. Il montre ce que ce volume d'heures produit aujourd'hui. Dans un autre registre, [Kilometrack](kilometrack), une application web que j'ai développée, est utilisée en production par ses clients."
+    },
+    {
+      "id": "methode.titre",
+      "text": "Comment on s'y prend"
+    },
+    {
+      "id": "methode.renvoi",
+      "text": "Le détail figure sur la page [méthode et tarifs](methode). Si vous tenez un commerce, la [page dédiée](contact) présente des cas chiffrés, et le [calculateur](calculateur) donne un ordre de grandeur pour ce qui peut s'automatiser autour du site. Les autres secteurs sont décrits dans les [pages métiers](metiers)."
+    },
+    {
+      "id": "cta",
+      "text": "Parlons de votre quotidien"
+    }
+  ],
+  "concepts": [
+    {
+      "segment": "chapo",
+      "concept": "les sites precedent l'automatisation dans le parcours",
+      "cible": "Avant l'automatisation, j'ai construit et fait fonctionner"
+    },
+    {
+      "segment": "chapo",
+      "concept": "types : vitrines, boutiques, serveurs, messageries",
+      "cible": "des sites vitrines, des boutiques en ligne, des serveurs et des messageries"
+    },
+    {
+      "segment": "chapo",
+      "concept": "pour de petites structures",
+      "cible": "pour de petites structures"
+    },
+    {
+      "segment": "chapo",
+      "concept": "metier d'origine",
+      "cible": "C'est mon métier d'origine"
+    },
+    {
+      "segment": "chapo",
+      "concept": "souvent le point de depart",
+      "cible": "c'est souvent par là qu'un projet commence"
+    },
+    {
+      "segment": "chapo",
+      "concept": "travail technique : faire tourner, relier, reprendre",
+      "cible": "Ma part est technique : installer, relier, reprendre."
+    },
+    {
+      "segment": "chapo",
+      "concept": "textes et visuels se fabriquent autrement aujourd'hui",
+      "cible": "Les textes et les visuels se préparent aujourd'hui avec d'autres moyens"
+    },
+    {
+      "segment": "offre.cartes.0.texte",
+      "concept": "trois options techniques",
+      "cible": "PrestaShop, WordPress avec WooCommerce, ou un outil plus léger"
+    },
+    {
+      "segment": "offre.cartes.0.texte",
+      "concept": "outil leger si petit catalogue",
+      "cible": "si votre catalogue compte peu de références"
+    },
+    {
+      "segment": "offre.cartes.0.texte",
+      "concept": "choix selon produits et habitudes",
+      "cible": "Le choix dépend de vos produits et de votre façon de travailler."
+    },
+    {
+      "segment": "offre.cartes.0.texte",
+      "concept": "on garde la boutique qui marche",
+      "cible": "Si votre boutique actuelle vous convient, je la conserve"
+    },
+    {
+      "segment": "offre.cartes.1.texte",
+      "concept": "le temps se perd autour de la boutique",
+      "cible": "Le temps passe surtout dans les tâches qui entourent la boutique"
+    },
+    {
+      "segment": "offre.cartes.1.texte",
+      "concept": "liste des taches",
+      "cible": "stocks recopiés, commandes ressaisies, fiches produits, étiquettes transporteur, factures"
+    },
+    {
+      "segment": "offre.cartes.1.texte",
+      "concept": "automatisable sans changer d'outil",
+      "cible": "en conservant vos outils actuels"
+    },
+    {
+      "segment": "offre.cartes.2.texte",
+      "concept": "symptomes du site abandonne",
+      "cible": "citation qui n existe pas"
+    },
+    {
+      "segment": "offre.cartes.2.texte",
+      "concept": "reprendre, documenter, remettre d'aplomb",
+      "cible": "Je reprends la main, je documente ce qui est en place et je remets le site en état de fonctionner."
+    },
+    {
+      "segment": "offre.cartes.2.texte",
+      "concept": "recuperation des acces",
+      "cible": "Vous récupérez l'ensemble des accès."
+    },
+    {
+      "segment": "offre.cartes.3.texte",
+      "concept": "relier deux outils",
+      "cible": "Relier deux outils qui n'échangent pas leurs données"
+    },
+    {
+      "segment": "offre.cartes.3.texte",
+      "concept": "import fournisseur, export comptable, nettoyage",
+      "cible": "importer un fichier fournisseur, exporter vers votre comptable, nettoyer et croiser des données"
+    },
+    {
+      "segment": "offre.cartes.3.texte",
+      "concept": "l'essentiel est ce qui entre et sort",
+      "cible": "Une bonne part du travail sur un site porte sur ce qui y entre et ce qui en sort."
+    },
+    {
+      "segment": "contenu.corps",
+      "concept": "ni redacteur ni graphiste",
+      "cible": "La rédaction et le graphisme ne sont pas mon métier."
+    },
+    {
+      "segment": "contenu.corps",
+      "concept": "l'IA produit des textes personnalises en quelques heures",
+      "cible": "L'IA permet aujourd'hui de produire en quelques heures des textes adaptés à votre ton, vos produits et vos villes"
+    },
+    {
+      "segment": "contenu.corps",
+      "concept": "visuels simples",
+      "cible": "des visuels simples : schémas, pictogrammes, bandeaux"
+    },
+    {
+      "segment": "contenu.corps",
+      "concept": "jamais de fausses photos",
+      "cible": "Je n'utilise pas de fausses photos."
+    },
+    {
+      "segment": "contenu.corps",
+      "concept": "relecture client obligatoire",
+      "cible": "Rien n'est publié sans votre relecture."
+    },
+    {
+      "segment": "contenu.preuve",
+      "concept": "ce site comme exemple",
+      "cible": "Ce site en est un exemple."
+    },
+    {
+      "segment": "contenu.preuve",
+      "concept": "vingt heures au lieu de cent",
+      "cible": "il a demandé ==une vingtaine d'heures== de travail, contre une centaine"
+    },
+    {
+      "segment": "contenu.preuve",
+      "concept": "montre ce que vingt heures produisent",
+      "cible": "Il montre ce que ce volume d'heures produit aujourd'hui."
+    },
+    {
+      "segment": "contenu.preuve",
+      "concept": "il n'est pas parfait",
+      "cible": null
+    },
+    {
+      "segment": "contenu.preuve",
+      "concept": "Kilometrack en production",
+      "cible": "[Kilometrack](kilometrack), une application web que j'ai développée, est utilisée en production par ses clients."
+    },
+    {
+      "segment": "methode.corps",
+      "concept": "premier echange",
+      "cible": "Nous commençons par un échange pour comprendre ce que le site doit faire au quotidien."
+    },
+    {
+      "segment": "methode.corps",
+      "concept": "devis heures ou demi-journees prix ferme avant engagement",
+      "cible": "un devis en heures ou en demi-journées, à prix ferme, avant tout engagement"
+    },
+    {
+      "segment": "methode.corps",
+      "concept": "pas d'abonnement",
+      "cible": "Il n'y a ni abonnement ni coût récurrent"
+    },
+    {
+      "segment": "methode.corps",
+      "concept": "propriete du code et des acces",
+      "cible": "ce qui est construit vous appartient, code et accès compris"
+    },
+    {
+      "segment": "methode.corps",
+      "concept": "reprenable par un autre developpeur",
+      "cible": "un autre développeur peut reprendre le travail après moi"
+    },
+    {
+      "segment": "methode.renvoi",
+      "concept": "renvoi methode",
+      "cible": "Le détail figure sur la page [méthode et tarifs](methode)."
+    },
+    {
+      "segment": "methode.renvoi",
+      "concept": "renvoi commerce",
+      "cible": "la [page dédiée](commerce) présente des cas chiffrés"
+    },
+    {
+      "segment": "methode.renvoi",
+      "concept": "renvoi calculateur",
+      "cible": "le [calculateur](calculateur) donne un ordre de grandeur"
+    },
+    {
+      "segment": "methode.renvoi",
+      "concept": "renvoi metiers",
+      "cible": "[pages métiers](metiers)"
+    }
+  ],
+  "ajouts": []
+}

@@ -1,0 +1,14 @@
+{
+  "name": "prismtext",
+  "version": "0.1.0",
+  "description": "Moteur agnostique de transformation de textes par prompts versionnes, sous contrat de bijection de concepts.",
+  "type": "module",
+  "bin": { "prismtext": "engine/cli.mjs" },
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "test": "node --test tests/engine.test.mjs",
+    "selftest": "node engine/cli.mjs selftest"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}
