@@ -4,7 +4,8 @@ PrismText transforme un texte deja en place (page web, fiche produit, email,
 doc) par un prompt versionne, appele **prisme**, et garantit que la version
 transformee dit la meme chose que la source : meme decoupage, memes liens,
 aucun chiffre ni nom invente, chaque idee de la source retrouvee dans la cible
-par une citation exacte. Plusieurs prismes sur un meme texte donnent plusieurs
+par une citation exacte, et chaque phrase de la cible rattachee a sa source par
+un verificateur qui ne l'a pas ecrite (passe inverse). Plusieurs prismes sur un meme texte donnent plusieurs
 variantes cote a cote : un humain choisit, puis la variante est publiee.
 
 ## Si on te demande d'installer PrismText
@@ -24,7 +25,7 @@ commandes et les codes de sortie.
 
 - `engine/` : le moteur, Node sans dependance. Deterministe : il ne fait
   appel a aucun LLM. Commandes : `describe`, `validate`, `prism`, `prompt`,
-  `check`, `report`, `chain`, `run`, `selftest`.
+  `inverse`, `check`, `report`, `chain`, `run`, `selftest`.
 - `contract/` : schemas JSON de l'input (produit par un adaptateur), du result
   (produit par le LLM, une variante) et de la config d'un projet hote. Le
   contrat est versionne (`"prismtext": "1"`) ; tout changement incompatible
@@ -49,6 +50,10 @@ commandes et les codes de sortie.
   retire avec `motif` est une alerte presentee a l'humain. Une citation `cible`
   introuvable dans le texte cible est une erreur : c'est le garde-fou contre
   une carte des concepts inventee.
+- Passe inverse obligatoire : chaque phrase modifiee de la cible doit etre
+  couverte (au moins la moitie de ses caracteres) par la carte inverse. Un
+  morceau sans source non declare dans `ajouts` est une erreur. La carte
+  inverse est produite par un agent qui n'a pas ecrit la variante.
 - Rien ne s'applique a une source sans validation humaine
   (`gates.human_validation`).
 - Codes de sortie : 0 conforme, 1 contenu non conforme, 2 usage ou contrat
@@ -58,12 +63,12 @@ commandes et les codes de sortie.
 
 ```bash
 npm test                          # suite node:test, zero dependance
-node engine/cli.mjs selftest      # cas reel site-web : conforme + 5 defauts detectes
+node engine/cli.mjs selftest      # cas reel site-web : conforme + 8 defauts detectes
 ```
 
 Les fixtures `tests/fixtures/site-web.*` viennent d'une vraie reecriture
 (page /site-web/ de latelier-automatise.fr, prisme `copywriter-b2b` 1.0.0) :
 toute evolution des controles doit continuer a accepter le cas conforme et a
-detecter les cinq defauts du cas casse.
+detecter les huit defauts du cas casse.
 
 Documentation au present uniquement : l'historique vit dans git.

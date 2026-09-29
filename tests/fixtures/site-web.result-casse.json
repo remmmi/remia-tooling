@@ -285,5 +285,157 @@
       "cible": "[pages métiers](metiers)"
     }
   ],
-  "ajouts": []
+  "ajouts": [],
+  "inverse": [
+    {
+      "segment": "chapo",
+      "cible": "Avant l'automatisation, j'ai construit et fait fonctionner",
+      "source": "Avant l'automatisation, il y a eu les sites"
+    },
+    {
+      "segment": "chapo",
+      "cible": "des sites vitrines, des boutiques en ligne, des serveurs et des messageries pour de petites structures",
+      "source": "vitrines, boutiques en ligne, serveurs, messageries, pour de petites structures"
+    },
+    {
+      "segment": "chapo",
+      "cible": "C'est mon métier d'origine, et c'est souvent par là qu'un projet commence.",
+      "source": "C'est mon métier d'origine, et souvent par là que tout commence."
+    },
+    {
+      "segment": "chapo",
+      "cible": "Ma part est technique : installer, relier, reprendre.",
+      "source": "Le travail est technique : faire tourner, relier, reprendre."
+    },
+    {
+      "segment": "chapo",
+      "cible": "Les textes et les visuels se préparent aujourd'hui avec d'autres moyens",
+      "source": "Les textes et les visuels, eux, se fabriquent aujourd'hui autrement."
+    },
+    {
+      "segment": "chapo",
+      "cible": "décrits plus bas",
+      "source": null
+    },
+    {
+      "segment": "offre.cartes.0.texte",
+      "cible": "PrestaShop, WordPress avec WooCommerce, ou un outil plus léger si votre catalogue compte peu de références.",
+      "source": "PrestaShop, WordPress avec WooCommerce, ou un outil plus léger quand le catalogue est petit."
+    },
+    {
+      "segment": "offre.cartes.0.texte",
+      "cible": "Le choix dépend de vos produits et de votre façon de travailler.",
+      "source": "Le choix se fait sur vos produits et vos habitudes."
+    },
+    {
+      "segment": "offre.cartes.0.texte",
+      "cible": "Si votre boutique actuelle vous convient, je la conserve",
+      "source": "Et si votre boutique actuelle marche, on la garde."
+    },
+    {
+      "segment": "offre.cartes.0.texte",
+      "cible": "et je pars de ce qui existe",
+      "source": null
+    },
+    {
+      "segment": "offre.cartes.1.texte",
+      "cible": "Le temps passe surtout dans les tâches qui entourent la boutique :",
+      "source": "Ce qui coûte du temps, ce n'est pas la boutique, c'est ce qui tourne autour :"
+    },
+    {
+      "segment": "offre.cartes.1.texte",
+      "cible": "stocks recopiés, commandes ressaisies, fiches produits, étiquettes transporteur, factures.",
+      "source": "stocks recopiés, commandes ressaisies, fiches produits, étiquettes transporteur, factures."
+    },
+    {
+      "segment": "offre.cartes.1.texte",
+      "cible": "Ces enchaînements peuvent s'[automatiser](automatisation) en conservant vos outils actuels.",
+      "source": "Ces enchaînements s'[automatisent](automatisation) sans changer d'outil."
+    },
+    {
+      "segment": "offre.cartes.2.texte",
+      "cible": "Un site que personne n'ose plus modifier, un prestataire qui a cessé de répondre, des mises à jour repoussées depuis deux ans.",
+      "source": "Un site que plus personne n'ose toucher, un prestataire parti, des mises à jour repoussées depuis deux ans."
+    },
+    {
+      "segment": "offre.cartes.2.texte",
+      "cible": "Je reprends la main, je documente ce qui est en place et je remets le site en état de fonctionner.",
+      "source": "Je reprends la main, je documente, je remets d'aplomb."
+    },
+    {
+      "segment": "offre.cartes.2.texte",
+      "cible": "Vous récupérez l'ensemble des accès.",
+      "source": "Vous récupérez tous les accès."
+    },
+    {
+      "segment": "offre.cartes.3.texte",
+      "cible": "Relier deux outils qui n'échangent pas leurs données, importer un fichier fournisseur, exporter vers votre comptable, nettoyer et croiser des données.",
+      "source": "Relier deux outils qui ne se parlent pas, importer un fichier fournisseur, exporter vers le comptable, nettoyer et croiser des données."
+    },
+    {
+      "segment": "contenu.corps",
+      "cible": "La rédaction et le graphisme ne sont pas mon métier.",
+      "source": "Je ne suis ni rédacteur ni graphiste"
+    },
+    {
+      "segment": "contenu.corps",
+      "cible": "L'IA permet aujourd'hui de produire en quelques heures des textes adaptés à votre ton, vos produits et vos villes, ainsi que des visuels simples : schémas, pictogrammes, bandeaux.",
+      "source": "des textes très personnalisés (votre ton, vos produits, vos villes) et des visuels simples (schémas, pictogrammes, bandeaux"
+    },
+    {
+      "segment": "contenu.corps",
+      "cible": "Je n'utilise pas de fausses photos.",
+      "source": "jamais de fausses photos"
+    },
+    {
+      "segment": "contenu.corps",
+      "cible": "Rien n'est publié sans votre relecture.",
+      "source": "Rien ne part sans votre relecture."
+    },
+    {
+      "segment": "contenu.preuve",
+      "cible": "Ce site en est un exemple.",
+      "source": "Ce site en est l'exemple"
+    },
+    {
+      "segment": "contenu.preuve",
+      "cible": "Textes, plans techniques et calculateur compris, il a demandé ==une vingtaine d'heures== de travail, contre une centaine",
+      "source": "textes, plans techniques et calculateur compris, il a demandé ==une vingtaine d'heures== là où il en aurait fallu une centaine."
+    },
+    {
+      "segment": "contenu.preuve",
+      "cible": "avec les méthodes précédentes",
+      "source": null
+    },
+    {
+      "segment": "contenu.preuve",
+      "cible": "Il montre ce que ce volume d'heures produit aujourd'hui.",
+      "source": "il montre ce que vingt heures produisent aujourd'hui."
+    },
+    {
+      "segment": "contenu.preuve",
+      "cible": "Dans un autre registre, [Kilometrack](kilometrack), une application web que j'ai développée, est utilisée en production par ses clients.",
+      "source": "Sur un autre registre, [Kilometrack](kilometrack), une application web que j'ai construite, tourne en production chez ses clients."
+    },
+    {
+      "segment": "methode.renvoi",
+      "cible": "Le détail figure sur la page [méthode et tarifs](methode).",
+      "source": "Le détail est sur la page [méthode et tarifs](methode)."
+    },
+    {
+      "segment": "methode.renvoi",
+      "cible": "Si vous tenez un commerce, la [page dédiée](commerce) présente des cas chiffrés,",
+      "source": "Si vous tenez un commerce, la [page dédiée](commerce) montre des cas chiffrés,"
+    },
+    {
+      "segment": "methode.renvoi",
+      "cible": "et le [calculateur](calculateur) donne un ordre de grandeur pour ce qui peut s'automatiser autour du site.",
+      "source": "et le [calculateur](calculateur) donne un ordre de grandeur pour ce qui s'automatise autour du site."
+    },
+    {
+      "segment": "methode.renvoi",
+      "cible": "Les autres secteurs sont décrits dans les [pages métiers](metiers).",
+      "source": "Les autres secteurs sont dans les [pages métiers](metiers)."
+    }
+  ]
 }

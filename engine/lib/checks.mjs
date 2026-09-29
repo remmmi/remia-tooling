@@ -112,9 +112,69 @@ export function check(input, result) {
       add('warn', id, 'concepts-non-cartographies', 'aucun concept declare pour ce segment');
     }
   }
-  for (const a of result.ajouts || []) add('warn', a.segment || '*', 'ajout-declare', `ajout declare : ${a.texte || JSON.stringify(a)}`);
+  checkInverse(result, src, dst, allSource, add);
+
+  // Sans carte inverse, les ajouts declares restent au moins visibles.
+  if (!Array.isArray(result.inverse)) {
+    for (const a of result.ajouts || []) add('warn', a.segment || '*', 'ajout-declare', `ajout declare : ${a.texte || JSON.stringify(a)}`);
+  }
 
   const errors = issues.filter((i) => i.level === 'error').length;
   const warnings = issues.length - errors;
   return { ok: errors === 0, errors, warnings, issues };
+}
+
+// Passe inverse : chaque phrase de la cible doit etre couverte (au moins la
+// moitie de ses caracteres) par des citations `cible` de la carte inverse, et
+// chaque citation pointe soit une citation exacte de la source, soit null.
+// Un null non declare dans `ajouts` est une idee inventee : erreur.
+function checkInverse(result, src, dst, allSource, add) {
+  const inv = result.inverse;
+  if (!Array.isArray(inv)) {
+    add('error', '*', 'passe-inverse-absente', 'aucune carte inverse (cible -> source) : lancer `prismtext inverse`');
+    return;
+  }
+  const declared = new Set((result.ajouts || []).map((a) => a.segment));
+  const ranges = new Map();
+  for (const e of inv) {
+    const d = dst.get(e.segment);
+    const s = src.get(e.segment);
+    if (!d || !s) { add('error', e.segment, 'inverse-segment-inconnu', `citation "${e.cible}" rattachee a un segment inconnu`); continue; }
+    const t = norm(d.text);
+    const q = norm(e.cible);
+    const pos = q ? t.indexOf(q) : -1;
+    if (pos < 0) add('error', e.segment, 'citation-cible-introuvable', `"${e.cible}" absent du segment cible`);
+    else {
+      if (!ranges.has(e.segment)) ranges.set(e.segment, []);
+      ranges.get(e.segment).push([pos, pos + q.length]);
+    }
+    if (e.source === null) {
+      if (declared.has(e.segment)) add('warn', e.segment, 'ajout-sans-source', `"${e.cible}" sans equivalent dans la source (declare)`);
+      else add('error', e.segment, 'ajout-non-declare', `"${e.cible}" sans equivalent dans la source ni declaration dans ajouts`);
+    } else if (!norm(s.text).includes(norm(e.source))) {
+      if (norm(allSource).includes(norm(e.source))) add('warn', e.segment, 'source-autre-segment', `"${e.source}" vient d'un autre segment`);
+      else add('error', e.segment, 'citation-source-introuvable', `"${e.source}" absent de la source`);
+    }
+  }
+  for (const [id, d] of dst) {
+    const s = src.get(id);
+    if (!s || s.constraints?.freeze || d.text === s.text) continue;
+    const t = norm(d.text);
+    const cov = ranges.get(id) || [];
+    for (const m of t.matchAll(/[^.!?]+[.!?]*/gu)) {
+      const sentence = m[0].trim();
+      if (sentence.split(/\s+/).length < 3) continue;
+      const start = m.index;
+      let total = 0;
+      let covered = 0;
+      for (let k = start; k < start + m[0].length; k++) {
+        if (/\s/.test(t[k])) continue;
+        total++;
+        if (cov.some(([a, b]) => k >= a && k < b)) covered++;
+      }
+      if (total && covered / total < 0.5) {
+        add('error', id, 'phrase-non-couverte', `phrase sans correspondance declaree : "${sentence}"`);
+      }
+    }
+  }
 }

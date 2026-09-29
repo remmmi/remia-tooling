@@ -46,26 +46,36 @@ Lis `prompt-a.md` en entier et applique-le comme une consigne autonome. Ecris `$
 
 Si plusieurs variantes sont demandees, delegue-les a des sous-agents en parallele (un par variante, chacun recoit le chemin de son prompt et de son result).
 
-## 4. Controler
+## 4. Passe inverse (verificateur independant)
+
+La variante est relue par un agent qui ne l'a PAS ecrite : lance un sous-agent par variante, avec pour seule consigne de lire `$RUN/inverse-prompt-a.md`, de l'appliquer et d'ecrire `$RUN/inverse-a.json`. Ne lui transmets ni la carte des concepts ni ton avis. Si aucun sous-agent n'est disponible, fais-la toi-meme dans un contexte neuf et signale-le dans le rapport final.
 
 ```bash
-$PT check $RUN/input.json $RUN/result-a.json --prism <prisme.md>
+$PT inverse $RUN/input.json $RUN/result-a.json > $RUN/inverse-prompt-a.md
 ```
 
-Exit 1 : corrige le result (et lui seul) puis recontrole, au plus `gates.max_fix_rounds` fois (defaut 2). Au-dela, garde la variante en echec dans le rapport et dis-le. Ne desactive jamais une regle de `protect` pour faire passer un controle.
+## 5. Controler
+
+```bash
+$PT check $RUN/input.json $RUN/result-a.json --inverse $RUN/inverse-a.json --prism <prisme.md>
+```
+
+Le controle se fait dans les deux sens : chaque idee de la source doit se retrouver dans la cible (carte des concepts), et chaque phrase de la cible doit avoir sa source (passe inverse). Un morceau sans source et non declare dans `ajouts` bloque. Pour lever ce blocage, deux voies : retirer l'ajout du texte, ou le declarer dans `ajouts` pour que l'humain tranche. Jamais en modifiant `inverse-a.json`.
+
+Exit 1 : corrige le result (et lui seul), relance la passe inverse sur le result corrige, puis recontrole, au plus `gates.max_fix_rounds` fois (defaut 2). Au-dela, garde la variante en echec dans le rapport et dis-le. Ne desactive jamais une regle de `protect` pour faire passer un controle.
 
 Chaine de prismes : `$PT chain input.json result.json > input-2.json`, puis on reprend a l'etape 3 avec le prisme suivant. Le chainage refuse un result non conforme.
 
-## 5. Faire valider par un humain
+## 6. Faire valider par un humain
 
 ```bash
 $PT report $RUN/input.json $RUN/result-*.json --out $RUN/rapport.md
 <commande preview de l'adaptateur pour chaque variante, si elle existe>
 ```
 
-Presente a l'utilisateur : le chemin du rapport, les URL ou chemins de preview, et pour chaque variante le nombre d'erreurs, d'alertes et chaque `concept-retire` avec son motif. Puis un AskUserQuestion : quelle variante appliquer (ou aucune). Si `gates.human_validation` est vrai (defaut), rien ne s'applique sans cette reponse.
+Presente a l'utilisateur : le chemin du rapport, les URL ou chemins de preview, et pour chaque variante le nombre d'erreurs, d'alertes, chaque `concept-retire` avec son motif et chaque `ajout-sans-source`. Puis un AskUserQuestion : quelle variante appliquer (ou aucune). Si `gates.human_validation` est vrai (defaut), rien ne s'applique sans cette reponse.
 
-## 6. Appliquer
+## 7. Appliquer
 
 ```bash
 <commande apply de l'adaptateur avec le result choisi>
@@ -73,4 +83,4 @@ Presente a l'utilisateur : le chemin du rapport, les URL ou chemins de preview, 
 echo '{"choix":"a","par":"humain","le":"<date ISO>"}' > $RUN/decision.json
 ```
 
-Termine par : ce qui a ete applique, la preuve de `verify`, le chemin du dossier de run. Le dossier de run est la trace d'audit : input, prompts, results, rapport, decision. Ne le supprime pas.
+Termine par : ce qui a ete applique, la preuve de `verify`, le chemin du dossier de run. Le dossier de run est la trace d'audit : input, prompts, results, passes inverses, rapport, decision. Ne le supprime pas.

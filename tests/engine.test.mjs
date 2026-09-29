@@ -29,7 +29,7 @@ test('cas reel site-web : conforme, retrait motive signale', () => {
 
 test('cas casse : chaque defaut est detecte', () => {
   const codes = new Set(check(input, load('site-web.result-casse.json')).issues.map((i) => i.code));
-  for (const c of ['segment-perdu', 'token-protege', 'chiffre-invente', 'citation-introuvable', 'concept-perdu']) {
+  for (const c of ['segment-perdu', 'token-protege', 'chiffre-invente', 'citation-introuvable', 'concept-perdu', 'ajout-non-declare', 'phrase-non-couverte', 'citation-cible-introuvable']) {
     assert.ok(codes.has(c), c);
   }
 });
@@ -38,6 +38,39 @@ test('lien : ancre libre, destination verrouillee', () => {
   const rules = [{ name: 'lien', regex: '\\[[^\\]]+\\]\\((?<keep>[a-z-]+)\\)' }];
   assert.deepEqual(protectedTokens('voir [la methode](methode)', rules), protectedTokens('lire [nos tarifs](methode)', rules));
   assert.notDeepEqual(protectedTokens('[x](methode)', rules), protectedTokens('[x](contact)', rules));
+});
+
+test('passe inverse absente = erreur', () => {
+  const r = structuredClone(good);
+  delete r.inverse;
+  assert.ok(check(input, r).issues.some((i) => i.code === 'passe-inverse-absente'));
+});
+
+test('passe inverse : source inventee = erreur, source d un autre segment = alerte', () => {
+  const r = structuredClone(good);
+  const e = r.inverse.find((x) => x.segment === 'offre.cartes.3.texte');
+  e.source = 'une phrase qui n existe nulle part';
+  assert.ok(check(input, r).issues.some((i) => i.code === 'citation-source-introuvable'));
+  e.source = 'Rien ne part sans votre relecture.';
+  assert.ok(check(input, r).issues.some((i) => i.code === 'source-autre-segment'));
+});
+
+test('CLI : check --inverse fusionne une carte produite a part', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismtext-'));
+  const r = structuredClone(good);
+  const inv = { inverse: r.inverse };
+  delete r.inverse;
+  writeFileSync(join(dir, 'r.json'), JSON.stringify(r));
+  writeFileSync(join(dir, 'inv.json'), JSON.stringify(inv));
+  assert.equal(spawnSync('node', [CLI, 'check', join(FX, 'site-web.input.json'), join(dir, 'r.json')]).status, 1);
+  assert.equal(spawnSync('node', [CLI, 'check', join(FX, 'site-web.input.json'), join(dir, 'r.json'), '--inverse', join(dir, 'inv.json')]).status, 0);
+});
+
+test('CLI : inverse ne montre que source et cible, pas la carte directe', () => {
+  const out = execFileSync('node', [CLI, 'inverse', join(FX, 'site-web.input.json'), join(FX, 'site-web.result.json')], { encoding: 'utf8' });
+  assert.match(out, /## methode\.corps/);
+  assert.doesNotMatch(out, /## h1/);
+  assert.doesNotMatch(out, /concept/);
 });
 
 test('segment gele modifie = erreur', () => {

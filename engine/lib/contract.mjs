@@ -70,5 +70,21 @@ export function validateResult(doc) {
     }
   });
   if (doc.ajouts !== undefined && !Array.isArray(doc.ajouts)) err(errors, 'ajouts', 'tableau attendu');
+  if (doc.inverse !== undefined) errors.push(...validateInverse(doc.inverse, 'inverse'));
+  return errors;
+}
+
+// Passe inverse : cible -> source. Produite de preference par un verificateur
+// qui n'a pas ecrit la variante (commande `inverse`).
+export function validateInverse(inv, path = 'inverse') {
+  const errors = [];
+  if (!Array.isArray(inv)) return [`${path} : tableau attendu (carte cible -> source)`];
+  inv.forEach((e, i) => {
+    if (!isObj(e) || typeof e.segment !== 'string' || typeof e.cible !== 'string') {
+      err(errors, `${path}.${i}`, 'objet { segment, cible, source } attendu');
+    } else if (e.source !== null && typeof e.source !== 'string') {
+      err(errors, `${path}.${i}.source`, 'chaine (citation exacte de la source) ou null attendu');
+    }
+  });
   return errors;
 }

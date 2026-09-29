@@ -11,7 +11,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { validateInput, validateResult, CONTRACT_VERSION } from './lib/contract.mjs';
+import { validateInput, validateResult, validateInverse, CONTRACT_VERSION } from './lib/contract.mjs';
 import { loadPrism, stamp } from './lib/prism.mjs';
 import { check } from './lib/checks.mjs';
 import { report } from './lib/report.mjs';
@@ -68,7 +68,8 @@ const MANIFEST = {
     'extract : l adaptateur produit input.json (segments + tokens proteges + contexte)',
     'prompt : le moteur assemble la consigne de transformation pour un prisme',
     'transform : le LLM (Claude, ou un runner API) produit result.json',
-    'check : le moteur verifie la bijection (bloquant si erreur)',
+    'inverse : un verificateur qui n a pas ecrit la variante cartographie cible -> source',
+    'check : le moteur verifie la bijection dans les deux sens (bloquant si erreur)',
     'report : le moteur produit le rapport de relecture, variantes cote a cote',
     'validation humaine : choix d une variante',
     'preview puis apply : l adaptateur publie la variante choisie',
@@ -78,7 +79,8 @@ const MANIFEST = {
     validate: 'validate <input.json> | validate --result <result.json>',
     prism: 'prism <prism.md> : metadonnees et tampon SHA-256 du prisme',
     prompt: 'prompt <prism.md> <input.json> [--variant a] : consigne complete a donner au LLM',
-    check: 'check <input.json> <result.json> [--prism <prism.md>] [--json]',
+    inverse: 'inverse <input.json> <result.json> : consigne du verificateur (passe inverse cible -> source)',
+    check: 'check <input.json> <result.json> [--inverse <inverse.json>] [--prism <prism.md>] [--json]',
     report: 'report <input.json> <result.json>... [--out rapport.md]',
     chain: 'chain <input.json> <result.json> : nouvel input (etape suivante d une chaine de prismes)',
     run: 'run <base-dir> : cree un dossier de run horodate (trace d audit) et affiche son chemin',
@@ -124,7 +126,7 @@ function buildPrompt(prism, input, variant) {
   }
   if (ctx.conserver?.length) out.push(`- Elements a conserver mot pour mot : ${ctx.conserver.map((c) => `"${c}"`).join(', ')}`);
   out.push('- Carte des concepts : pour chaque idee de chaque segment source, un objet { segment, concept, cible } ou "cible" est une citation EXACTE (copier-coller) du segment cible qui porte cette idee. Si une idee est volontairement abandonnee (parce que le prisme l exige), cible = null et un champ "motif" cite la regle du prisme : le relecteur humain tranchera. Sans motif, c est une erreur bloquante.');
-  out.push('- Tout ajout d idee absente de la source est declare dans "ajouts" : [{ segment, texte }].');
+  out.push('- Tout ajout d idee absente de la source est declare dans "ajouts" : [{ segment, texte }]. Un verificateur independant relira ensuite chaque phrase de la cible pour lui trouver sa source : un ajout non declare sera une erreur bloquante.');
   out.push('');
   out.push('## Segments source');
   out.push('');
@@ -148,6 +150,29 @@ function buildPrompt(prism, input, variant) {
     concepts: [{ segment: input.segments[0].id, concept: '...', cible: '...' }],
     ajouts: [],
   }, null, 2));
+  out.push('```');
+  return out.join('\n');
+}
+
+function buildInversePrompt(input, result) {
+  const out = [];
+  out.push(`# Verification inverse PrismText : variante "${result.variant}" (${result.prism.id}@${result.prism.version})`);
+  out.push('');
+  out.push('Tu n as pas ecrit ce texte. Ton role est de le soupconner. Pour chaque segment ci-dessous, decoupe le texte CIBLE en morceaux (propositions ou phrases) qui couvrent la totalite de la cible, et pour chacun donne la citation EXACTE (copier-coller) du texte SOURCE qui porte la meme idee.');
+  out.push('');
+  out.push('- Si un morceau dit quelque chose que la source ne dit pas (engagement, precision, nuance, cause, promesse, interpretation, changement de sujet grammatical qui change le sens, "je" devenu "nous"...), sa source vaut null. Ne rattache pas un ajout a une source vague pour le faire passer.');
+  out.push('- Une reformulation fidele n est pas un ajout.');
+  out.push('- "cible" et "source" sont des copier-coller exacts, sans guillemets ajoutes ni ponctuation modifiee.');
+  out.push('- Les segments identiques ou gelés sont omis.');
+  out.push('');
+  const dst = new Map(result.segments.map((s) => [s.id, s.text]));
+  for (const s of input.segments) {
+    const d = dst.get(s.id);
+    if (s.constraints?.freeze || d === undefined || d === s.text) continue;
+    out.push(`## ${s.id}`, '', '**Source**', '', s.text, '', '**Cible**', '', d, '');
+  }
+  out.push('## Sortie attendue', '', 'Un unique document JSON, sans commentaire autour :', '', '```json');
+  out.push(JSON.stringify({ inverse: [{ segment: '<id>', cible: '<citation exacte de la cible>', source: '<citation exacte de la source ou null>' }] }, null, 2));
   out.push('```');
   return out.join('\n');
 }
@@ -191,12 +216,25 @@ function main() {
       return console.log(buildPrompt(p, loadInput(args[1]), variant));
     }
 
+    case 'inverse': {
+      if (args.length < 2) die('usage : inverse <input.json> <result.json>');
+      return console.log(buildInversePrompt(loadInput(args[0]), loadResult(args[1])));
+    }
+
     case 'check': {
       const prismPath = flag(args, '--prism');
+      const inversePath = flag(args, '--inverse');
       const asJson = has(args, '--json');
       if (args.length < 2) die('usage : check <input.json> <result.json> [--prism <prism.md>] [--json]');
       const input = loadInput(args[0]);
       const result = loadResult(args[1]);
+      if (inversePath) {
+        const inv = readJson(inversePath);
+        const list = Array.isArray(inv) ? inv : inv.inverse;
+        const errs = validateInverse(list, inversePath);
+        if (errs.length) die(`inverse invalide :\n  - ${errs.join('\n  - ')}`);
+        result.inverse = list;
+      }
       const res = check(input, result);
       if (prismPath) {
         let p;
@@ -249,7 +287,7 @@ function main() {
       const good = check(input, loadResult(join(fx, 'site-web.result.json')));
       const bad = check(input, loadResult(join(fx, 'site-web.result-casse.json')));
       const codes = new Set(bad.issues.map((i) => i.code));
-      const expected = ['token-protege', 'chiffre-invente', 'citation-introuvable', 'concept-perdu', 'segment-perdu'];
+      const expected = ['token-protege', 'chiffre-invente', 'citation-introuvable', 'concept-perdu', 'segment-perdu', 'ajout-non-declare', 'phrase-non-couverte', 'citation-cible-introuvable'];
       const missing = expected.filter((c) => !codes.has(c));
       if (!good.ok) { printCheck(good, false); die('selftest : le cas conforme est rejete', 1); }
       if (missing.length) die(`selftest : defauts non detectes : ${missing.join(', ')}`, 1);

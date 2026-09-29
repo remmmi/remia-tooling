@@ -14,6 +14,8 @@ segments, fait reecrire chaque segment par Claude selon le prisme, puis
 | Liens, variables, tokens proteges identiques | oui |
 | Aucun chiffre absent de la source | oui |
 | Chaque idee de la source retrouvee par une citation exacte de la cible | oui |
+| Chaque phrase de la cible rattachee a sa source par un verificateur independant | oui |
+| Ajout d'idee declare (absente de la source) | non, signale |
 | Idee retiree avec un motif tire du prisme | non, signalee |
 | Nom propre nouveau, chiffre deplace, ecart de longueur | non, signale |
 
@@ -49,7 +51,8 @@ peut vivre dans le depot (partage) ou dans `.prismtext/prisms/` d'un projet.
 ```
 source reelle --[adaptateur: extract]--> input.json
 input.json + prisme --[moteur: prompt]--> consigne --[LLM]--> result.json
-input.json + result.json --[moteur: check, report]--> rapport --[humain]--> choix
+input.json + result.json --[moteur: inverse]--> consigne --[verificateur]--> inverse.json
+input.json + result.json + inverse.json --[moteur: check, report]--> rapport --[humain]--> choix
 result.json choisi --[adaptateur: preview / apply / verify]--> source reelle
 ```
 
