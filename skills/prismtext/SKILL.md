@@ -95,3 +95,29 @@ echo '{"choix":"a","par":"humain","le":"<date ISO>"}' > $RUN/decision.json
 ```
 
 Termine par : ce qui a ete applique, la preuve de `verify`, le chemin du dossier de run. Le dossier de run est la trace d'audit : input, prompts, results, passes inverses, rapport, decision. Ne le supprime pas.
+
+## Mode lot (plusieurs sources d'un coup)
+
+Declencheurs : "toutes les pages", "tout le site", une liste de sources, "par lots". Meme deroule que ci-dessus, avec un dossier par source et un seul rapport.
+
+1. **Perimetre.** `<commande list de l'adaptateur>` donne toutes les sources. Reformule le perimetre en une ligne (sources incluses, exclusions demandees) et fais-le confirmer par un AskUserQuestion s'il reste un doute.
+2. **Avant.** `<before_batch>` avec `{lot}` = nom court du lot (ex. `copywriter-2026-09-29`). S'il echoue, arrete tout.
+3. **Creer le lot.**
+   ```bash
+   LOT=$($PT lot .prismtext/runs <nom> <ref1> <ref2> ...)
+   $PT lot-status $LOT          # a tout moment ; sert aussi a reprendre un lot interrompu
+   ```
+   Chaque source a son dossier `$LOT/<slug>/` : c'est un `$RUN` ordinaire pour les etapes 2 a 5.
+4. **Extraire** toutes les sources (etape 2), dans l'ordre.
+5. **Transformer en parallele.** Un sous-agent redacteur par source (par vagues de 5), chacun recoit : le chemin de `prompt-a.md`, le chemin ou ecrire `result-a.json`, et les regles dures de l'etape 3. Puis un sous-agent **verificateur different** par source pour la passe inverse (etape 4). Un redacteur ne verifie jamais son propre texte.
+6. **Controler** chaque source (etape 5, boucle de correction comprise), puis :
+   ```bash
+   for d in $LOT/*/; do $PT report $d/input.json $d/result-*.json --out $d/rapport.md; done
+   $PT lot-report $LOT --out $LOT/rapport-lot.md
+   ```
+7. **Validation humaine.** Presente le tableau du rapport de lot et, pour chaque source, ses trois listes de decisions. AskUserQuestion : "Appliquer toutes les sources conformes", "Je choisis source par source" (l'utilisateur liste dans le chat), "Ne rien appliquer". Une source non conforme ne s'applique jamais en bloc. Enregistre chaque choix : `$PT decide $LOT/<slug> <a|aucune>`.
+8. **Appliquer** chaque source decidee : `<apply>` puis `<verify>` puis `$PT applied $LOT/<slug> a` (refuse sans decision humaine).
+9. **Apres.** `<after_batch>` avec `{lot}` et `{lotdir}` (build, commit, tag "apres" : rien de sortant).
+10. **Publier** seulement sur accord explicite (AskUserQuestion) : `<publish>`.
+
+Termine par le tableau de `lot-status`, les tags poses, la preuve de `verify` et de `after_batch`, et le chemin du rapport de lot.

@@ -175,6 +175,29 @@ test('adaptateur de reference : aller-retour sans perte', () => {
   assert.equal(readFileSync(f, 'utf8'), src, 'preview ne touche pas la source');
 });
 
+test('lot : creation, etat par source, rapport consolide, decision, application', () => {
+  const base = mkdtempSync(join(tmpdir(), 'prismtext-lot-'));
+  const dir = execFileSync('node', [CLI, 'lot', base, 'essai', 'src/pages/a.yaml', 'src/pages/b.yaml'], { encoding: 'utf8' }).trim();
+  const a = join(dir, 'src-pages-a');
+  writeFileSync(join(a, 'input.json'), readFileSync(join(FX, 'site-web.input.json')));
+  writeFileSync(join(a, 'result-a.json'), readFileSync(join(FX, 'site-web.result.json')));
+  let st = JSON.parse(execFileSync('node', [CLI, 'lot-status', dir, '--json'], { encoding: 'utf8' }));
+  assert.equal(st.sources[0].stage, 'verifie', 'la carte inverse est embarquee dans le result');
+  assert.equal(st.sources[1].stage, 'a-faire');
+  assert.equal(st.sources[0].checks[0].retraits, 1);
+  assert.equal(spawnSync('node', [CLI, 'applied', a, 'a']).status, 1, 'pas d application sans decision humaine');
+  execFileSync('node', [CLI, 'decide', a, 'a']);
+  assert.equal(spawnSync('node', [CLI, 'applied', a, 'b']).status, 1, 'pas d application d une autre variante que celle choisie');
+  execFileSync('node', [CLI, 'applied', a, 'a']);
+  st = JSON.parse(execFileSync('node', [CLI, 'lot-status', dir, '--json'], { encoding: 'utf8' }));
+  assert.equal(st.sources[0].stage, 'applique');
+  const md = execFileSync('node', [CLI, 'lot-report', dir], { encoding: 'utf8' });
+  assert.match(md, /\| src\/pages\/a\.yaml \| applique \| a \|/);
+  assert.match(md, /\| src\/pages\/b\.yaml \| a-faire \|/);
+  assert.match(md, /Retraits voulus par le prisme/);
+  assert.equal(spawnSync('node', [CLI, 'lot', base, 'Mauvais Nom', 'x']).status, 2);
+});
+
 test('selftest', () => {
   assert.equal(spawnSync('node', [CLI, 'selftest']).status, 0);
 });

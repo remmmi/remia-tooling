@@ -15,6 +15,7 @@ import { validateInput, validateResult, validateInverse, CONTRACT_VERSION } from
 import { loadPrism, stamp } from './lib/prism.mjs';
 import { check, checkRegression } from './lib/checks.mjs';
 import { report } from './lib/report.mjs';
+import { createLot, lotStatus, lotReport } from './lib/lot.mjs';
 
 const HOME = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const PKG = JSON.parse(readFileSync(join(HOME, 'package.json'), 'utf8'));
@@ -84,6 +85,11 @@ const MANIFEST = {
     report: 'report <input.json> <result.json>... [--out rapport.md]',
     chain: 'chain <input.json> <result.json> : nouvel input (etape suivante d une chaine de prismes)',
     run: 'run <base-dir> : cree un dossier de run horodate (trace d audit) et affiche son chemin',
+    lot: 'lot <base-dir> <nom> <ref>... : cree un lot (un sous-dossier de run par source) et affiche son chemin',
+    'lot-status': 'lot-status <lot-dir> [--json] : etape atteinte par chaque source (reprise d un lot interrompu)',
+    'lot-report': 'lot-report <lot-dir> [--out rapport.md] : rapport consolide du lot, decisions par source',
+    decide: 'decide <run-dir> <variante|aucune> [--par <qui>] : enregistre la decision humaine',
+    applied: 'applied <run-dir> <variante> : enregistre qu une variante a ete appliquee a la source',
     selftest: 'selftest : rejoue les cas de reference du depot',
   },
   exit_codes: { 0: 'conforme', 1: 'contenu non conforme', 2: 'usage ou contrat invalide' },
@@ -286,6 +292,58 @@ function main() {
       const dir = join(args[0], ts);
       mkdirSync(dir, { recursive: true });
       return console.log(dir);
+    }
+
+    case 'lot': {
+      if (args.length < 3) die('usage : lot <base-dir> <nom> <ref>...');
+      try { return console.log(createLot(args[0], args[1], args.slice(2))); } catch (e) { die(e.message); }
+    }
+
+    case 'lot-status': {
+      const asJson = has(args, '--json');
+      if (!args[0]) die('usage : lot-status <lot-dir> [--json]');
+      let st;
+      try { st = lotStatus(args[0]); } catch (e) { die(e.message); }
+      if (asJson) {
+        for (const s of st.sources) for (const c of s.checks) delete c.issues;
+        return console.log(JSON.stringify(st, null, 2));
+      }
+      for (const s of st.sources) {
+        const c = s.checks.map((x) => `${x.variant}:${x.ok ? 'ok' : 'NON'}`).join(' ');
+        console.log(`${s.stage.padEnd(10)} ${s.ref}${c ? `  [${c}]` : ''}${s.decision ? `  choix=${s.decision.choix}` : ''}`);
+      }
+      return;
+    }
+
+    case 'lot-report': {
+      const outPath = flag(args, '--out');
+      if (!args[0]) die('usage : lot-report <lot-dir> [--out rapport.md]');
+      let md;
+      try { md = lotReport(args[0]); } catch (e) { die(e.message); }
+      if (outPath) { writeFileSync(outPath, md); return console.log(`[OK] rapport de lot ecrit : ${outPath}`); }
+      return console.log(md);
+    }
+
+    case 'decide': {
+      const par = flag(args, '--par') || 'humain';
+      if (args.length < 2) die('usage : decide <run-dir> <variante|aucune> [--par <qui>]');
+      const [dir, choix] = args;
+      if (choix !== 'aucune') {
+        const rp = join(dir, `result-${choix}.json`);
+        loadResult(rp);
+      }
+      writeFileSync(join(dir, 'decision.json'), JSON.stringify({ choix, par, le: new Date().toISOString() }, null, 2) + '\n');
+      return console.log(`[OK] decision ${choix} enregistree dans ${dir}`);
+    }
+
+    case 'applied': {
+      if (args.length < 2) die('usage : applied <run-dir> <variante>');
+      const [dir, variant] = args;
+      let dec;
+      try { dec = JSON.parse(readFileSync(join(dir, 'decision.json'), 'utf8')); } catch { die(`pas de decision humaine dans ${dir} : rien ne s applique sans elle`, 1); }
+      if (dec.choix !== variant) die(`la decision humaine est "${dec.choix}", pas "${variant}"`, 1);
+      writeFileSync(join(dir, 'applied.json'), JSON.stringify({ variant, le: new Date().toISOString() }, null, 2) + '\n');
+      return console.log(`[OK] variante ${variant} marquee appliquee`);
     }
 
     case 'selftest': {

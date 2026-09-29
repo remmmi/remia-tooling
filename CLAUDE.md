@@ -25,7 +25,8 @@ commandes et les codes de sortie.
 
 - `engine/` : le moteur, Node sans dependance. Deterministe : il ne fait
   appel a aucun LLM. Commandes : `describe`, `validate`, `prism`, `prompt`,
-  `inverse`, `check`, `report`, `chain`, `run`, `selftest`.
+  `inverse`, `check`, `report`, `chain`, `run`, `lot`, `lot-status`,
+  `lot-report`, `decide`, `applied`, `selftest`.
 - `contract/` : schemas JSON de l'input (produit par un adaptateur), du result
   (produit par le LLM, une variante) et de la config d'un projet hote. Le
   contrat est versionne (`"prismtext": "1"`) ; tout changement incompatible
@@ -58,7 +59,12 @@ commandes et les codes de sortie.
   boucle de correction : `check --previous` le bloque (`retrait-annule`).
   Retablir est une decision humaine, prise a la relecture du rapport.
 - Rien ne s'applique a une source sans validation humaine
-  (`gates.human_validation`).
+  (`gates.human_validation`) : `applied` refuse une variante sans
+  `decision.json`, ou differente de celle choisie.
+- Mode lot : un dossier par source, etat lu sur le disque (`lot-status`),
+  donc un lot interrompu reprend la ou il s'est arrete. Les commandes
+  d'adaptateur `before_batch` et `after_batch` ne font rien de sortant ;
+  `publish` est la seule action sortante, sur accord humain explicite.
 - Codes de sortie : 0 conforme, 1 contenu non conforme, 2 usage ou contrat
   invalide. Les scripts et la CI s'appuient dessus.
 

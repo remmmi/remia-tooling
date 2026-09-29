@@ -3,32 +3,102 @@
   "$id": "prismtext/config/1",
   "title": "Configuration PrismText du projet hote (.prismtext/config.json)",
   "type": "object",
-  "required": ["prismtext", "adapters"],
+  "required": [
+    "prismtext",
+    "adapters"
+  ],
   "properties": {
-    "prismtext": { "const": "1" },
-    "prisms_dirs": { "type": "array", "items": { "type": "string" }, "description": "dossiers de prismes, dans l'ordre de recherche ; defaut : .prismtext/prisms puis <PRISMTEXT_HOME>/prisms" },
-    "runs_dir": { "type": "string", "description": "trace d'audit ; defaut .prismtext/runs" },
+    "prismtext": {
+      "const": "1"
+    },
+    "prisms_dirs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "dossiers de prismes, dans l'ordre de recherche ; defaut : .prismtext/prisms puis <PRISMTEXT_HOME>/prisms"
+    },
+    "runs_dir": {
+      "type": "string",
+      "description": "trace d'audit ; defaut .prismtext/runs"
+    },
     "gates": {
       "type": "object",
       "properties": {
-        "human_validation": { "type": "boolean", "description": "toujours true en production : aucun apply sans choix humain" },
-        "max_fix_rounds": { "type": "integer", "minimum": 0, "description": "tentatives de correction apres un check en echec ; defaut 2" }
+        "human_validation": {
+          "type": "boolean",
+          "description": "toujours true en production : aucun apply sans choix humain"
+        },
+        "max_fix_rounds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "tentatives de correction apres un check en echec ; defaut 2"
+        }
       }
     },
-    "chains": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } }, "description": "nom -> liste d'ids de prismes appliques en sequence" },
+    "chains": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "description": "nom -> liste d'ids de prismes appliques en sequence"
+    },
     "adapters": {
       "type": "object",
       "additionalProperties": {
         "type": "object",
-        "required": ["description", "extract", "apply"],
+        "required": [
+          "description",
+          "extract",
+          "apply"
+        ],
         "properties": {
-          "description": { "type": "string" },
-          "refs": { "type": "string", "description": "comment designer une source (ex. 'nom de page : site-web, contact...')" },
-          "extract": { "type": "string", "description": "commande ; variables {ref} {input}" },
-          "preview": { "type": "string", "description": "commande ; variables {ref} {result} ; affiche une URL ou un chemin" },
-          "apply": { "type": "string", "description": "commande ; variables {ref} {result}" },
-          "verify": { "type": "string", "description": "commande apres apply ; variables {ref} ; exit 0 = ok" },
-          "context": { "type": "object", "description": "contexte par defaut fusionne dans chaque input" }
+          "description": {
+            "type": "string"
+          },
+          "refs": {
+            "type": "string",
+            "description": "comment designer une source (ex. 'nom de page : site-web, contact...')"
+          },
+          "extract": {
+            "type": "string",
+            "description": "commande ; variables {ref} {input}"
+          },
+          "preview": {
+            "type": "string",
+            "description": "commande ; variables {ref} {result} ; affiche une URL ou un chemin"
+          },
+          "apply": {
+            "type": "string",
+            "description": "commande ; variables {ref} {result}"
+          },
+          "verify": {
+            "type": "string",
+            "description": "commande apres apply ; variables {ref} ; exit 0 = ok"
+          },
+          "context": {
+            "type": "object",
+            "description": "contexte par defaut fusionne dans chaque input"
+          },
+          "list": {
+            "type": "string",
+            "description": "commande ; affiche une ref par ligne (toutes les sources transformables)"
+          },
+          "before_batch": {
+            "type": "string",
+            "description": "commande avant un lot (ex. tag git 'avant') ; variable {lot} (nom du lot)"
+          },
+          "after_batch": {
+            "type": "string",
+            "description": "commande apres les apply d'un lot (ex. build, commit, tag 'apres') ; variables {lot} {lotdir} ; aucune action sortante"
+          },
+          "publish": {
+            "type": "string",
+            "description": "action sortante (push, deploiement) ; lancee seulement sur accord humain explicite ; variables {lot} {ref}"
+          }
         }
       }
     }

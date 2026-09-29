@@ -38,7 +38,7 @@ adaptateurs propres au projet.
 
 « Passe le prisme copywriter-b2b sur la page contact », « fais-moi trois
 variantes de la fiche produit X », « applique la chaine publication a
-l'article Y ». Chaque run laisse sa trace dans `.prismtext/runs/<horodatage>/` :
+l'article Y », « prisme copywriter-b2b sur toutes les pages, en lot ». Chaque run laisse sa trace dans `.prismtext/runs/<horodatage>/` :
 source extraite, consignes, variantes, rapport, decision.
 
 ## Ajouter un prisme
