@@ -1,0 +1,118 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "prismtext/input/1",
+  "title": "PrismText input (produit par l'adaptateur, commande extract)",
+  "type": "object",
+  "required": [
+    "prismtext",
+    "source",
+    "segments"
+  ],
+  "properties": {
+    "prismtext": {
+      "const": "1"
+    },
+    "source": {
+      "type": "object",
+      "required": [
+        "adapter",
+        "ref"
+      ],
+      "properties": {
+        "adapter": {
+          "type": "string",
+          "description": "nom de l'adaptateur dans .prismtext/config.json"
+        },
+        "ref": {
+          "type": "string",
+          "description": "reference de la source, comprise par l'adaptateur (chemin, ID, URL)"
+        }
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "entrees du prisme : public, support, objectif, voix, longueur, conserver (a garder mot pour mot), lengthTolerance (defaut 0.35), rendu (texte visible de l'item entier tel que le lecteur le voit, gabarit compris : lecture seule, garantit la coherence de la reecriture)",
+      "properties": {
+        "conserver": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "lengthTolerance": {
+          "type": "number",
+          "minimum": 0
+        },
+        "rendu": {
+          "type": "string"
+        }
+      }
+    },
+    "protect": {
+      "type": "array",
+      "description": "tokens proteges ; un groupe nomme (?<keep>...) limite la protection a cette partie",
+      "items": {
+        "type": "object",
+        "required": [
+          "name",
+          "regex"
+        ],
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "regex": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "segments": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "text"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "text": {
+            "type": "string"
+          },
+          "role": {
+            "type": "string",
+            "description": "indication libre : title, body, meta, cta..."
+          },
+          "constraints": {
+            "type": "object",
+            "properties": {
+              "freeze": {
+                "type": "boolean"
+              },
+              "maxChars": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "lengthTolerance": {
+                "type": "number",
+                "minimum": 0
+              }
+            }
+          }
+        }
+      }
+    },
+    "lineage": {
+      "type": "array",
+      "description": "prismes deja appliques (commande chain)"
+    }
+  }
+}

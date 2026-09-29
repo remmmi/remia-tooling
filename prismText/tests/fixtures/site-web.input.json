@@ -1,0 +1,150 @@
+{
+  "prismtext": "1",
+  "source": {
+    "adapter": "fixture-yaml",
+    "ref": "site-web.yaml (latelier-automatise.fr, avant reecriture)"
+  },
+  "context": {
+    "public": "dirigeants de TPE, artisans, commercants des Hautes-Alpes",
+    "support": "site",
+    "objectif": "obtenir un contact",
+    "voix": "je (prestataire seul), vouvoiement"
+  },
+  "protect": [
+    {
+      "name": "lien",
+      "regex": "\\[[^\\]]+\\]\\((?<keep>[a-z0-9-]+)\\)",
+      "note": "ancre libre, cle de destination fixe"
+    },
+    {
+      "name": "surligne",
+      "regex": "==[^=]+=="
+    },
+    {
+      "name": "variable",
+      "regex": "\\{\\{[a-z]+\\}\\}"
+    }
+  ],
+  "segments": [
+    {
+      "id": "seo.title",
+      "text": "Création ou reprise de site web et boutique en ligne (05)",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "seo.description",
+      "text": "Création ou reprise de votre site et boutique en ligne (PrestaShop, WordPress, sur mesure) dans les Hautes-Alpes. Textes préparés avec l'IA, prix ferme.",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "jsonLdDescription",
+      "text": "Création et reprise de sites web et de boutiques en ligne, connexions entre outils et sources de données, dans les Hautes-Alpes.",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "h1",
+      "text": "Site web et boutique en ligne : création, reprise, connexions",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "chapo",
+      "text": "Avant l'automatisation, il y a eu les sites : vitrines, boutiques en ligne, serveurs, messageries, pour de petites structures. C'est mon métier d'origine, et souvent par là que tout commence. Le travail est technique : faire tourner, relier, reprendre. Les textes et les visuels, eux, se fabriquent aujourd'hui autrement."
+    },
+    {
+      "id": "offre.titre",
+      "text": "Ce que je fais",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "offre.cartes.0.titre",
+      "text": "Boutique en ligne",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "offre.cartes.0.texte",
+      "text": "PrestaShop, WordPress avec WooCommerce, ou un outil plus léger quand le catalogue est petit. Le choix se fait sur vos produits et vos habitudes. Et si votre boutique actuelle marche, on la garde."
+    },
+    {
+      "id": "offre.cartes.1.titre",
+      "text": "Ce qui tourne autour de la boutique",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "offre.cartes.1.texte",
+      "text": "Ce qui coûte du temps, ce n'est pas la boutique, c'est ce qui tourne autour : stocks recopiés, commandes ressaisies, fiches produits, étiquettes transporteur, factures. Ces enchaînements s'[automatisent](automatisation) sans changer d'outil."
+    },
+    {
+      "id": "offre.cartes.2.titre",
+      "text": "Reprise d'un site existant",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "offre.cartes.2.texte",
+      "text": "Un site que plus personne n'ose toucher, un prestataire parti, des mises à jour repoussées depuis deux ans. Je reprends la main, je documente, je remets d'aplomb. Vous récupérez tous les accès."
+    },
+    {
+      "id": "offre.cartes.3.titre",
+      "text": "Connexions et données",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "offre.cartes.3.texte",
+      "text": "Relier deux outils qui ne se parlent pas, importer un fichier fournisseur, exporter vers le comptable, nettoyer et croiser des données. Le gros du travail d'un site, c'est ce qui y entre et ce qui en sort."
+    },
+    {
+      "id": "contenu.titre",
+      "text": "Et les textes, les visuels ?",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "contenu.corps",
+      "text": "Je ne suis ni rédacteur ni graphiste, et je ne le prétends pas. Mais l'IA a changé ce point précis : des textes très personnalisés (votre ton, vos produits, vos villes) et des visuels simples (schémas, pictogrammes, bandeaux, jamais de fausses photos) se produisent aujourd'hui en quelques heures. Rien ne part sans votre relecture."
+    },
+    {
+      "id": "contenu.preuve",
+      "text": "Ce site en est l'exemple : textes, plans techniques et calculateur compris, il a demandé ==une vingtaine d'heures== là où il en aurait fallu une centaine. Il n'est pas parfait, mais il est en ligne, et il montre ce que vingt heures produisent aujourd'hui. Sur un autre registre, [Kilometrack](kilometrack), une application web que j'ai construite, tourne en production chez ses clients."
+    },
+    {
+      "id": "methode.titre",
+      "text": "Comment on s'y prend",
+      "constraints": {
+        "freeze": true
+      }
+    },
+    {
+      "id": "methode.corps",
+      "text": "Un premier échange pour comprendre ce que le site doit faire au quotidien. Puis un devis en heures ou en demi-journées, à prix ferme, avant tout engagement. Pas d'abonnement ni de coût récurrent caché : ce qui est construit vous appartient, code et accès compris, et n'importe quel développeur peut reprendre après moi."
+    },
+    {
+      "id": "methode.renvoi",
+      "text": "Le détail est sur la page [méthode et tarifs](methode). Si vous tenez un commerce, la [page dédiée](commerce) montre des cas chiffrés, et le [calculateur](calculateur) donne un ordre de grandeur pour ce qui s'automatise autour du site. Les autres secteurs sont dans les [pages métiers](metiers)."
+    },
+    {
+      "id": "cta",
+      "text": "Parlons de votre quotidien",
+      "constraints": {
+        "freeze": true
+      }
+    }
+  ]
+}
