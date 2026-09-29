@@ -46,7 +46,7 @@ Une seule ref = un lot d'un item : meme deroule.
    LOT=$($PT lot .prismtext/runs <nom> <ref>...)
    ```
    Chaque item a son dossier de run `$LOT/<slug>/`. `$PT lot-status $LOT` dit a tout moment ou en est chaque item : c'est aussi le point de reprise d'un lot interrompu.
-4. **Extraire** chaque item : `<extract>` avec `{input}` = `$LOT/<slug>/input.json`. Fusionne `adapters.<nom>.context` dans `input.context` si l'adaptateur ne le fait pas.
+4. **Extraire** chaque item : `<extract>` avec `{input}` = `$LOT/<slug>/input.json`. L adaptateur y met le contexte du projet (`adapters.<nom>.context`) et la page rendue ; le pilote n ouvre pas l input.
 5. **Rediger.** Pour chaque item et chaque variante :
    ```bash
    $PT brief <prisme.md> $LOT/<slug> --variant a
