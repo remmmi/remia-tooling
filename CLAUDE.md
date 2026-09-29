@@ -54,6 +54,9 @@ commandes et les codes de sortie.
   couverte (au moins la moitie de ses caracteres) par la carte inverse. Un
   morceau sans source non declare dans `ajouts` est une erreur. La carte
   inverse est produite par un agent qui n'a pas ecrit la variante.
+- Une idee retiree par le prisme avec motif n'est jamais retablie par une
+  boucle de correction : `check --previous` le bloque (`retrait-annule`).
+  Retablir est une decision humaine, prise a la relecture du rapport.
 - Rien ne s'applique a une source sans validation humaine
   (`gates.human_validation`).
 - Codes de sortie : 0 conforme, 1 contenu non conforme, 2 usage ou contrat

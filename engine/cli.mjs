@@ -13,7 +13,7 @@ import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateInput, validateResult, validateInverse, CONTRACT_VERSION } from './lib/contract.mjs';
 import { loadPrism, stamp } from './lib/prism.mjs';
-import { check } from './lib/checks.mjs';
+import { check, checkRegression } from './lib/checks.mjs';
 import { report } from './lib/report.mjs';
 
 const HOME = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -80,7 +80,7 @@ const MANIFEST = {
     prism: 'prism <prism.md> : metadonnees et tampon SHA-256 du prisme',
     prompt: 'prompt <prism.md> <input.json> [--variant a] : consigne complete a donner au LLM',
     inverse: 'inverse <input.json> <result.json> : consigne du verificateur (passe inverse cible -> source)',
-    check: 'check <input.json> <result.json> [--inverse <inverse.json>] [--prism <prism.md>] [--json]',
+    check: 'check <input.json> <result.json> [--inverse <inverse.json>] [--previous <result-avant-correction.json>] [--prism <prism.md>] [--json]',
     report: 'report <input.json> <result.json>... [--out rapport.md]',
     chain: 'chain <input.json> <result.json> : nouvel input (etape suivante d une chaine de prismes)',
     run: 'run <base-dir> : cree un dossier de run horodate (trace d audit) et affiche son chemin',
@@ -224,6 +224,7 @@ function main() {
     case 'check': {
       const prismPath = flag(args, '--prism');
       const inversePath = flag(args, '--inverse');
+      const previousPath = flag(args, '--previous');
       const asJson = has(args, '--json');
       if (args.length < 2) die('usage : check <input.json> <result.json> [--prism <prism.md>] [--json]');
       const input = loadInput(args[0]);
@@ -236,6 +237,12 @@ function main() {
         result.inverse = list;
       }
       const res = check(input, result);
+      if (previousPath) {
+        const reg = checkRegression(loadResult(previousPath), result);
+        res.issues.unshift(...reg);
+        res.errors += reg.length;
+        if (reg.length) res.ok = false;
+      }
       if (prismPath) {
         let p;
         try { p = loadPrism(prismPath); } catch (e) { die(e.message); }

@@ -178,3 +178,22 @@ function checkInverse(result, src, dst, allSource, add) {
     }
   }
 }
+
+// Garde-fou des boucles de correction : une idee que le prisme avait retiree
+// volontairement (cible null + motif) ne doit pas reapparaitre pour faire
+// passer un controle. La retablir est une decision humaine. Une perte sans
+// motif, elle, peut legitimement etre reparee par la correction.
+export function checkRegression(previous, result) {
+  const issues = [];
+  const now = new Map(result.concepts.map((c) => [`${c.segment}\u0000${c.concept}`, c]));
+  for (const c of previous.concepts) {
+    if (c.cible !== null || !c.motif) continue;
+    const n = now.get(`${c.segment}\u0000${c.concept}`);
+    if (!n) {
+      issues.push({ level: 'error', segment: c.segment, code: 'retrait-disparu', msg: `concept "${c.concept}" retire avec motif dans la version precedente, absent de la carte corrigee` });
+    } else if (n.cible !== null) {
+      issues.push({ level: 'error', segment: c.segment, code: 'retrait-annule', msg: `concept "${c.concept}" retire par le prisme (${c.motif}) puis reintroduit par la correction : retablir est une decision humaine` });
+    }
+  }
+  return issues;
+}

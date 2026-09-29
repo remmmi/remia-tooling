@@ -16,6 +16,23 @@ export function report(input, results) {
     lines.push(`| ${r.variant} | ${r.prism.id}@${r.prism.version} (${r.prism.sha256.slice(0, 8)}) | ${checks[i].errors} | ${checks[i].warnings} |`);
   });
   lines.push('');
+  // Decisions humaines, separees par nature : un retrait voulu par le prisme
+  // se confirme, une perte sans motif se repare, un ajout s'accepte ou non.
+  const DECISIONS = [
+    ['Retraits voulus par le prisme (a confirmer, ne rien retablir par defaut)', ['concept-retire']],
+    ['Pertes sans motif (bloquantes, a reparer)', ['concept-perdu']],
+    ['Ajouts absents de la source (a accepter ou retirer)', ['ajout-sans-source', 'ajout-non-declare', 'ajout-declare']],
+  ];
+  results.forEach((r, i) => {
+    const blocks = DECISIONS.map(([title, codes]) => [title, checks[i].issues.filter((x) => codes.includes(x.code))]).filter(([, l]) => l.length);
+    if (!blocks.length) return;
+    lines.push(`## Decisions : variante ${r.variant}`, '');
+    for (const [title, list] of blocks) {
+      lines.push(`**${title}**`, '');
+      for (const x of list) lines.push(`- ${x.segment} : ${x.msg}`);
+      lines.push('');
+    }
+  });
   for (const s of input.segments) {
     lines.push(`## ${s.id}`);
     lines.push('');

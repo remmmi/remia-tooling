@@ -73,6 +73,30 @@ test('CLI : inverse ne montre que source et cible, pas la carte directe', () => 
   assert.doesNotMatch(out, /concept/);
 });
 
+test('--previous : retrait motive puis reintroduit = erreur, perte reparee = ok', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismtext-'));
+  const annule = structuredClone(good);
+  annule.concepts.find((c) => c.concept === "il n'est pas parfait").cible = 'Ce site en est un exemple.';
+  delete annule.concepts.find((c) => c.concept === "il n'est pas parfait").motif;
+  writeFileSync(join(dir, 'annule.json'), JSON.stringify(annule));
+  const out = spawnSync('node', [CLI, 'check', join(FX, 'site-web.input.json'), join(dir, 'annule.json'), '--previous', join(FX, 'site-web.result.json')], { encoding: 'utf8' });
+  assert.equal(out.status, 1);
+  assert.match(out.stdout, /retrait-annule/);
+  const avant = structuredClone(good);
+  const c = avant.concepts.find((x) => x.concept === 'pas de cout cache');
+  c.cible = null;
+  writeFileSync(join(dir, 'avant.json'), JSON.stringify(avant));
+  assert.equal(spawnSync('node', [CLI, 'check', join(FX, 'site-web.input.json'), join(FX, 'site-web.result.json'), '--previous', join(dir, 'avant.json')]).status, 0);
+});
+
+test('report : section Decisions separe retraits voulus et ajouts', () => {
+  const md = execFileSync('node', [CLI, 'report', join(FX, 'site-web.input.json'), join(FX, 'site-web.result.json')], { encoding: 'utf8' });
+  assert.match(md, /## Decisions : variante a/);
+  assert.match(md, /Retraits voulus par le prisme[\s\S]*il n'est pas parfait/);
+  assert.match(md, /Ajouts absents de la source[\s\S]*décrits plus bas/);
+  assert.doesNotMatch(md, /Pertes sans motif/);
+});
+
 test('segment gele modifie = erreur', () => {
   const r = structuredClone(good);
   r.segments.find((s) => s.id === 'h1').text = 'Autre titre';
