@@ -124,7 +124,7 @@ test('element a conserver retire = erreur', () => {
 });
 
 test('prisme : tampon stable et verifie par check --prism', () => {
-  const p = loadPrism(join(ROOT, 'prisms', 'copywriter-b2b.md'));
+  const p = loadPrism(join(FX, 'copywriter-b2b-1.0.0.md'));
   assert.equal(p.sha256, good.prism.sha256);
   const bad = structuredClone(good);
   bad.prism.sha256 = '0'.repeat(64);
@@ -150,7 +150,7 @@ function runDir(result) {
   if (result) writeFileSync(join(dir, 'result-a.json'), JSON.stringify(result));
   return dir;
 }
-const PRISM = join(ROOT, 'prisms', 'copywriter-b2b.md');
+const PRISM = join(FX, 'copywriter-b2b-1.0.0.md');
 
 test('brief : consigne autonome (cadre isole, prisme, page rendue, segments, destination)', () => {
   const dir = runDir();
