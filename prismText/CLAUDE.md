@@ -1,14 +1,21 @@
-# PrismText : ce que tu dois savoir en arrivant dans ce depot
+# PrismText : ce que tu dois savoir en arrivant dans ce dossier
 
 PrismText transforme un texte deja en place (page web, fiche produit, email,
 doc) par un prompt versionne, appele **prisme**, et garantit que la version
 transformee dit la meme chose que la source : meme decoupage, memes liens,
 aucun chiffre ni nom invente, chaque idee de la source retrouvee dans la cible
 par une citation exacte, et chaque phrase de la cible rattachee a sa source par
-un verificateur qui ne l'a pas ecrite (passe inverse). Plusieurs prismes sur un meme texte donnent plusieurs
-variantes cote a cote : un humain choisit, puis la variante est publiee.
+un verificateur qui ne l'a pas ecrite (passe inverse). Plusieurs prismes sur
+un meme texte donnent plusieurs variantes cote a cote : un humain choisit, puis la variante est publiee.
+
+PrismText est le dossier `prismText/` du depot remia-tooling. References :
+`README.md` (vue d'ensemble, pieges), `INSTALL.md` (installation pas a pas),
+`docs/contrat.md` (formats et codes de controle), `docs/adaptateurs.md`
+(ecrire un adaptateur), `docs/prismes.md` (ecrire un prisme).
 
 ## Si on te demande d'installer PrismText
+
+Suivre `INSTALL.md`. En bref :
 
 1. `./install.sh` (ou `./install.sh --project <dossier>`) : verifie Node >= 18,
    lance le selftest, pose les skills `prismtext` et `prismtext-install` et la
@@ -21,7 +28,7 @@ variantes cote a cote : un humain choisit, puis la variante est publiee.
 `prismtext describe` (ou `--json`) donne a tout moment le deroule, les
 commandes et les codes de sortie.
 
-## Ce qui est dans le depot, et ce qui n'y est pas
+## Ce qui est dans ce dossier, et ce qui n'y est pas
 
 - `engine/` : le moteur, Node sans dependance. Deterministe : il ne fait
   appel a aucun LLM. `prismtext describe` liste les commandes. Il travaille
@@ -37,7 +44,7 @@ commandes et les codes de sortie.
   markdown, un segment par paragraphe). Modele de tout adaptateur.
 - `skills/` : `prismtext` (executer une transformation), `prismtext-install`
   (brancher un projet).
-- Les adaptateurs d'un projet ne sont **jamais** dans ce depot : ils vivent
+- Les adaptateurs d'un projet ne sont **jamais** dans ce dossier : ils vivent
   dans `.prismtext/adapters/` du projet hote. Le moteur ne sait rien de ce qui
   se trouve de l'autre cote.
 
