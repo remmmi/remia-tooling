@@ -1,8 +1,15 @@
-name: test
-on: [push, pull_request]
+name: prismText
+on:
+  push:
+    paths: ['prismText/**', '.github/workflows/prismtext.yml']
+  pull_request:
+    paths: ['prismText/**', '.github/workflows/prismtext.yml']
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: prismText
     strategy:
       matrix:
         node: [18, 20, 22]

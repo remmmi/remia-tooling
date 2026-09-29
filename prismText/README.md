@@ -24,10 +24,15 @@ seul rapport, cote a cote. L'humain choisit ; l'adaptateur du projet publie.
 
 ## Installer
 
+PrismText vit dans le dossier `prismText/` du depot remia-tooling :
+
 ```bash
-git clone <depot> ~/outils/prismtext
-~/outils/prismtext/install.sh
+git clone https://github.com/remmmi/remia-tooling.git
+remia-tooling/prismText/install.sh
 ```
+
+Les skills et la CLI installes sont des liens vers ce dossier : un `git pull`
+du depot met tout a jour.
 
 Puis, dans le projet ou vivent les textes, demander a Claude : « branche
 PrismText sur ce projet ». Claude pose quelques questions (ou vivent les
