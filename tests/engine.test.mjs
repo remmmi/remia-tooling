@@ -186,6 +186,9 @@ test('lot : creation, etat par source, rapport consolide, decision, application'
   assert.equal(st.sources[1].stage, 'a-faire');
   assert.equal(st.sources[0].checks[0].retraits, 1);
   assert.equal(spawnSync('node', [CLI, 'applied', a, 'a']).status, 1, 'pas d application sans decision humaine');
+  writeFileSync(join(a, 'result-z.json'), readFileSync(join(FX, 'site-web.result-casse.json')));
+  assert.equal(spawnSync('node', [CLI, 'decide', a, 'z']).status, 1, 'variante non conforme refusee sans --force');
+  assert.equal(spawnSync('node', [CLI, 'decide', a, 'z', '--force']).status, 0);
   execFileSync('node', [CLI, 'decide', a, 'a']);
   assert.equal(spawnSync('node', [CLI, 'applied', a, 'b']).status, 1, 'pas d application d une autre variante que celle choisie');
   execFileSync('node', [CLI, 'applied', a, 'a']);

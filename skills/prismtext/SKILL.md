@@ -115,7 +115,7 @@ Declencheurs : "toutes les pages", "tout le site", une liste de sources, "par lo
    for d in $LOT/*/; do $PT report $d/input.json $d/result-*.json --out $d/rapport.md; done
    $PT lot-report $LOT --out $LOT/rapport-lot.md
    ```
-7. **Validation humaine.** Presente le tableau du rapport de lot et, pour chaque source, ses trois listes de decisions. AskUserQuestion : "Appliquer toutes les sources conformes", "Je choisis source par source" (l'utilisateur liste dans le chat), "Ne rien appliquer". Une source non conforme ne s'applique jamais en bloc. Enregistre chaque choix : `$PT decide $LOT/<slug> <a|aucune>`.
+7. **Validation humaine.** Presente le tableau du rapport de lot et, pour chaque source, ses trois listes de decisions. AskUserQuestion : "Appliquer toutes les sources conformes", "Je choisis source par source" (l'utilisateur liste dans le chat), "Ne rien appliquer". Une source non conforme ne s'applique jamais en bloc. Enregistre chaque choix : `$PT decide $LOT/<slug> <a|aucune>`. `decide` refuse une variante non conforme ; `--force` seulement si l'humain l'a demande explicitement pour cette source.
 8. **Appliquer** chaque source decidee : `<apply>` puis `<verify>` puis `$PT applied $LOT/<slug> a` (refuse sans decision humaine).
 9. **Apres.** `<after_batch>` avec `{lot}` et `{lotdir}` (build, commit, tag "apres" : rien de sortant).
 10. **Publier** seulement sur accord explicite (AskUserQuestion) : `<publish>`.

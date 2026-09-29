@@ -8,7 +8,7 @@
 // Codes de sortie : 0 = conforme, 1 = contenu non conforme (erreurs de
 // bijection), 2 = usage ou contrat invalide.
 
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateInput, validateResult, validateInverse, CONTRACT_VERSION } from './lib/contract.mjs';
@@ -88,7 +88,7 @@ const MANIFEST = {
     lot: 'lot <base-dir> <nom> <ref>... : cree un lot (un sous-dossier de run par source) et affiche son chemin',
     'lot-status': 'lot-status <lot-dir> [--json] : etape atteinte par chaque source (reprise d un lot interrompu)',
     'lot-report': 'lot-report <lot-dir> [--out rapport.md] : rapport consolide du lot, decisions par source',
-    decide: 'decide <run-dir> <variante|aucune> [--par <qui>] : enregistre la decision humaine',
+    decide: 'decide <run-dir> <variante|aucune> [--par <qui>] [--force] : enregistre la decision humaine (--force pour une variante non conforme)',
     applied: 'applied <run-dir> <variante> : enregistre qu une variante a ete appliquee a la source',
     selftest: 'selftest : rejoue les cas de reference du depot',
   },
@@ -291,12 +291,12 @@ function main() {
       const ts = new Date().toISOString().replace(/[:]/g, '').replace(/\..+/, 'Z');
       const dir = join(args[0], ts);
       mkdirSync(dir, { recursive: true });
-      return console.log(dir);
+      return console.log(resolve(dir));
     }
 
     case 'lot': {
       if (args.length < 3) die('usage : lot <base-dir> <nom> <ref>...');
-      try { return console.log(createLot(args[0], args[1], args.slice(2))); } catch (e) { die(e.message); }
+      try { return console.log(resolve(createLot(args[0], args[1], args.slice(2)))); } catch (e) { die(e.message); }
     }
 
     case 'lot-status': {
@@ -328,9 +328,13 @@ function main() {
       const par = flag(args, '--par') || 'humain';
       if (args.length < 2) die('usage : decide <run-dir> <variante|aucune> [--par <qui>]');
       const [dir, choix] = args;
+      const force = has(args, '--force');
       if (choix !== 'aucune') {
-        const rp = join(dir, `result-${choix}.json`);
-        loadResult(rp);
+        const result = loadResult(join(dir, `result-${choix}.json`));
+        const invPath = join(dir, `inverse-${choix}.json`);
+        if (existsSync(invPath)) { const inv = readJson(invPath); result.inverse = Array.isArray(inv) ? inv : inv.inverse; }
+        const res = check(loadInput(join(dir, 'input.json')), result);
+        if (!res.ok && !force) die(`variante ${choix} non conforme (${res.errors} erreur(s)) : la choisir quand meme demande --force, sur demande explicite de l humain`, 1);
       }
       writeFileSync(join(dir, 'decision.json'), JSON.stringify({ choix, par, le: new Date().toISOString() }, null, 2) + '\n');
       return console.log(`[OK] decision ${choix} enregistree dans ${dir}`);
