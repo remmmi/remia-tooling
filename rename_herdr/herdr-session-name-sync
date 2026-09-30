@@ -36,6 +36,10 @@ def find_herdr():
 
 
 def alive(pid):
+    """Le pid est-il vivant ? Sous Windows os.kill(pid, 0) TERMINE le processus :
+    porter avec psutil.pid_exists ou OpenProcess avant d'utiliser ce script là-bas."""
+    if os.name != "posix":
+        raise SystemExit("herdr-session-name-sync : test de pid non porté hors POSIX (voir TECHNIQUE.md)")
     try:
         os.kill(int(pid), 0)
         return True

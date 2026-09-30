@@ -46,6 +46,13 @@ Claude Code n'a **pas** d'événement de hook sur `/rename` (vérifié sur 2.1.2
 déclencheur sur le fichier. Les noms automatiques (`nameSource: derived`) sont ignorés. Un onglet
 renommé à la main après le `/rename` reste tel quel jusqu'au `/rename` suivant.
 
+## Autre plateforme (macOS, Windows, Linux sans systemd)
+
+Ce dossier est l'implémentation **Linux** ; la technique elle-même ne dépend pas de l'OS et est
+décrite dans [`TECHNIQUE.md`](TECHNIQUE.md) : signal, appariement, action, et une table des
+déclencheurs par plateforme (launchd, FileSystemWatcher, watchexec) plus une variante portable par
+hook Claude Code. Un agent qui lit ce fichier peut reconstruire l'outil sans rien d'autre.
+
 ## Contenu
 
 | Fichier | Rôle |
@@ -53,5 +60,6 @@ renommé à la main après le `/rename` reste tel quel jusqu'au `/rename` suivan
 | `herdr-session-name-sync` | le script (python3, sans dépendance) |
 | `units/rename-herdr.path`, `units/rename-herdr.service` | déclencheur et service systemd utilisateur |
 | `install.sh`, `selftest.sh` | installation idempotente, vérification sans fausse session |
-| `INSTALL.md` | procédure pour l'agent qui installe |
-| `skills/rename-herdr/SKILL.md` | skill Claude Code : installer, diagnostiquer, et **reconstruire sans le dépôt** (les trois savoirs, avec les pièges Debian) |
+| `INSTALL.md` | procédure pour l'agent qui installe (Linux) |
+| `TECHNIQUE.md` | la technique sans OS : de quoi reconstruire sur macOS, Windows, ou sans systemd |
+| `skills/rename-herdr/SKILL.md` | skill Claude Code : installer, diagnostiquer, et renvoyer à `TECHNIQUE.md` pour reconstruire ailleurs |
