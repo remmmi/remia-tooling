@@ -7,7 +7,7 @@ BIN="${BIN:-$HOME/.local/bin}"
 ko=0; t() { if "$@" >/dev/null 2>&1; then echo "[ok] $*"; else echo "[KO] $*"; ko=$((ko+1)); fi; }
 
 # 1. le script du dépôt est du python valide et tourne à vide sans herdr
-t python3 -m py_compile "$HERE/herdr-session-name-sync"
+t python3 -c "import ast,sys; ast.parse(open(sys.argv[1]).read())" "$HERE/herdr-session-name-sync"
 t env HERDR_BIN=/nonexistent PATH=/usr/bin "$HERE/herdr-session-name-sync"
 
 # 2. fichiers installés et identiques au dépôt
