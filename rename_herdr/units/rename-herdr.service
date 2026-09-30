@@ -1,0 +1,7 @@
+[Unit]
+Description=rename_herdr : sync nom de session Claude Code -> libellé d'onglet herdr
+
+[Service]
+Type=oneshot
+# Le PATH d'un service utilisateur ne contient pas ~/.local/bin : chemin absolu obligatoire.
+ExecStart=%h/.local/bin/herdr-session-name-sync

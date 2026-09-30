@@ -1,0 +1,11 @@
+[Unit]
+Description=rename_herdr : renomme l'onglet herdr quand une session Claude Code est renommée (/rename)
+
+[Path]
+# Claude Code écrit ~/.claude/sessions/<pid>.json à chaque /rename (et à chaque changement d'état).
+# PathModified pose un inotify sur le dossier : toute écriture dedans lance le service.
+PathModified=%h/.claude/sessions
+Unit=rename-herdr.service
+
+[Install]
+WantedBy=default.target
