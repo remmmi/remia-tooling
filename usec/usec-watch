@@ -41,6 +41,8 @@ SESSION_GUARD = env_num("USEC_WATCH_SESSION_GUARD", 1800)
 REALERT = env_num("USEC_WATCH_REALERT", 3600)
 WINDOW = 5400        # projection : pente calculée sur les relevés des 90 dernières minutes
 MIN_SPAN = 600       # … couvrant au moins 10 min
+WEEK = 7 * 86400     # durée d'une période hebdomadaire
+WEEK_GUARD = env_num("USEC_WATCH_WEEK_GUARD", 21600)  # pas de projection hebdo avant 6 h écoulées
 STALE = 7200         # relevé plus vieux : on ne s'en sert pas pour alerter
 KEEP = 8 * 86400     # historique conservé
 
@@ -183,11 +185,24 @@ def evaluate(now=None):
         if q["period"] == "session" and remaining < SESSION_GUARD:
             continue
         eta = None
-        pts = history_points(q, now)
-        if len(pts) >= 2 and pts[-1][0] - pts[0][0] >= MIN_SPAN:
-            rate = (pts[-1][1] - pts[0][1]) / (pts[-1][0] - pts[0][0])  # % par seconde
-            if rate > 0 and used < 100:
-                t100 = pts[-1][0] + (100 - pts[-1][1]) / rate
+        if q["period"] == "session":
+            # Session (5 h) : l'usage y est continu, la pente récente est un bon prédicteur.
+            pts = history_points(q, now)
+            if len(pts) >= 2 and pts[-1][0] - pts[0][0] >= MIN_SPAN:
+                rate = (pts[-1][1] - pts[0][1]) / (pts[-1][0] - pts[0][0])  # % par seconde
+                if rate > 0 and used < 100:
+                    t100 = pts[-1][0] + (100 - pts[-1][1]) / rate
+                    if t100 < reset_ts:
+                        eta = t100
+        else:
+            # Semaine : l'usage vient par rafales (sessions de travail, nuits vides). Prolonger la
+            # pente des 90 dernières minutes 24 h/24 criait au loup (30/09 : 3 % → « 100 % le 04/10 »).
+            # On projette la MOYENNE depuis le début de la semaine, après WEEK_GUARD écoulé.
+            debut = reset_ts - WEEK
+            ecoule = now - debut
+            if ecoule >= WEEK_GUARD and used > 0 and used < 100:
+                rate = used / ecoule
+                t100 = now + (100 - used) / rate
                 if t100 < reset_ts:
                     eta = t100
         if used >= CRIT or eta is not None:

@@ -75,6 +75,13 @@ mk '[{"period":"session","used_percent":70,"reset_in":10800}]' 0 '[[1200, 60], [
 check "watch : 70 % mais 100 % avant le reset → alerte projetée" "hk | grep -q 'au rythme actuel, 100 %'"
 mk '[{"period":"session","used_percent":70,"reset_in":10800}]' 0 '[[1200, 69], [0, 70]]'
 check "watch : pente lente → silence"          "[ -z \"\$(hk)\" ]"
+# Semaine : une rafale en début de semaine (0 → 3 % en 80 min, 12 h après le reset) ne doit pas
+# se projeter 24 h/24 (fausse alerte du 30/09/2026 : « 100 % le 04/10 ») — moyenne depuis le début.
+mk '[{"period":"week","used_percent":3,"reset_in":560400}]' 0 '[[4800, 0], [0, 3]]'
+check "watch : rafale en début de semaine → silence" "[ -z \"\$(hk)\" ]"
+# … mais 60 % en 2 jours (reset dans 5 j) atteint 100 % avant le reset → alerte projetée.
+mk '[{"period":"week","used_percent":60,"reset_in":432000}]' 0 '[[4800, 59], [0, 60]]'
+check "watch : semaine 60 % en 2 j → alerte projetée" "hk | grep -q 'au rythme actuel, 100 %'"
 mk "$WEEK90"
 check "watch : USEC_WATCH_INNER → silence"     "[ -z \"\$(printf '{}' | USEC_WATCH_INNER=1 '$HERE/usec-watch' hook)\" ]"
 rm -rf "$W"

@@ -28,7 +28,7 @@ active en permanence. Deux couches :
 
 1. **Hook `usec-watch`** (la garantie) — branché sur `UserPromptSubmit` et `PostToolUse`. Il sort
    en quelques ms tant que le dernier relevé a moins de 20 min ; sinon il relance `usec` détaché,
-   sans bloquer. Il garde un historique et projette au rythme des 90 dernières minutes. Silence
+   sans bloquer. Il garde un historique et projette : session au rythme des 90 dernières minutes, semaine à la moyenne depuis le début de la semaine (après 6 h — une rafale de travail ne se prolonge pas 24 h/24). Silence
    tant que rien n'est critique ; sinon une ligne `[usec-watch] …` arrive dans le contexte de
    l'agent, qui prévient l'utilisateur. Une même alerte ne revient pas avant 1 h dans une session.
 2. **Règle CLAUDE.md** (le jugement) — l'agent peut lire `usec-watch status` (gratuit) après ou
