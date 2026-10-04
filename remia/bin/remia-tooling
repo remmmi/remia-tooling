@@ -1,0 +1,488 @@
+#!/usr/bin/env python3
+"""remia-tooling — le point dépôt vs local des plugins de la marketplace remia-tooling.
+
+  remia-tooling status [--json]          par plugin : version au dépôt, version installée, état, décision,
+                                         restes d'une installation à la main
+  remia-tooling decide <plugin> <choix>  mémorise la réponse à une proposition d'installation, pour ne
+                                         pas reposer la question : oui | non | oubli (efface la réponse)
+  remia-tooling migrate [--dry-run] [plugin…]
+                                         retire ce qu'une installation à la main laisse en doublon du plugin
+                                         (skills copiés, hooks de settings.json, bloc usec de CLAUDE.md),
+                                         après sauvegarde ; sans nom : tous les plugins concernés
+  remia-tooling path                     dossier du clone de la marketplace
+  remia-tooling hook                     hooks SessionStart et UserPromptSubmit du plugin (événement sur stdin)
+  remia-tooling --version
+
+Ne clone et ne télécharge rien : lit le clone de la marketplace que Claude Code tient à jour et
+~/.claude/plugins/installed_plugins.json. N'installe ni ne met à jour aucun plugin : c'est le travail
+de `/plugin` et de `claude plugin install|update`. Réponses mémorisées :
+~/.config/remia-tooling/decisions.json. Le hook sort toujours en code 0 et se tait s'il n'a rien à dire.
+"""
+import json
+import os
+import re
+import shutil
+import subprocess
+import sys
+import time
+
+VERSION = "1.0.0"
+MARKET = "remia-tooling"
+HOME = os.path.expanduser("~")
+CLAUDE = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(HOME, ".claude")
+PLUGINS = os.path.join(CLAUDE, "plugins")
+SETTINGS = os.path.join(CLAUDE, "settings.json")
+CLAUDE_MD = os.path.join(CLAUDE, "CLAUDE.md")
+SKILLS = os.path.join(CLAUDE, "skills")
+CONF = os.path.join(HOME, ".config", "remia-tooling")
+CACHE = os.path.join(HOME, ".cache", "remia-tooling")
+DECISIONS = os.path.join(CONF, "decisions.json")
+MENTION_EVERY = 3600  # rappel « faire le point » au plus une fois par heure et par session
+MENTION = re.compile(r"remia[\s_-]?tooling|\bremia\b", re.I)
+USEC_BLOCK = re.compile(r"\n*<!-- usec:start.*?<!-- usec:end -->\n?", re.DOTALL)
+PROFILE = re.compile(r"<!-- (?:PROFIL:DEBUT|PROFILE:START).*?-->\n(.*?)<!-- (?:PROFIL:FIN|PROFILE:END) -->", re.DOTALL)
+
+
+# ── fichiers ──────────────────────────────────────────────────────────────────────────────
+def load_json(path, default):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return json.load(fh)
+    except Exception:
+        return default
+
+
+def save_json(path, data):
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    tmp = path + ".tmp-remia"
+    with open(tmp, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, indent=2, ensure_ascii=False)
+        fh.write("\n")
+    os.replace(tmp, path)
+
+
+def read_text(path):
+    try:
+        with open(path, encoding="utf-8") as fh:
+            return fh.read()
+    except Exception:
+        return ""
+
+
+def tilde(path):
+    return path.replace(HOME, "~", 1) if path.startswith(HOME) else path
+
+
+# ── marketplace et plugins installés ──────────────────────────────────────────────────────
+def known_marketplace():
+    return load_json(os.path.join(PLUGINS, "known_marketplaces.json"), {}).get(MARKET) or {}
+
+
+def market_dir():
+    """Clone de la marketplace : celui de Claude Code, sinon le clone de travail d'où tourne ce script."""
+    here = os.path.dirname(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+    for c in (os.environ.get("REMIA_MARKETPLACE_DIR"), known_marketplace().get("installLocation"),
+              os.path.join(PLUGINS, "marketplaces", MARKET), here):
+        if c and os.path.isfile(os.path.join(c, ".claude-plugin", "marketplace.json")):
+            return c
+    return None
+
+
+def auto_update():
+    """True / False / None (jamais réglée : coupée par défaut pour une marketplace tierce)."""
+    declared = (load_json(SETTINGS, {}).get("extraKnownMarketplaces") or {}).get(MARKET) or {}
+    if "autoUpdate" in declared:
+        return bool(declared["autoUpdate"])
+    return known_marketplace().get("autoUpdate")
+
+
+def catalog(root):
+    """[(nom, description, version au dépôt ou "" si la source est un autre dépôt)]"""
+    out = []
+    manifest = load_json(os.path.join(root, ".claude-plugin", "marketplace.json"), {})
+    for p in manifest.get("plugins", []):
+        version = p.get("version", "")
+        if not version and isinstance(p.get("source"), str):
+            version = load_json(os.path.join(root, p["source"], ".claude-plugin", "plugin.json"), {}).get("version", "")
+        out.append((p.get("name", ""), p.get("description", ""), version))
+    return out
+
+
+def installed_version(name):
+    entries = load_json(os.path.join(PLUGINS, "installed_plugins.json"), {}).get("plugins", {}).get(f"{name}@{MARKET}") or []
+    entries = sorted(entries, key=lambda e: e.get("scope") != "user")
+    return entries[0].get("version", "?") if entries else None
+
+
+def vparse(v):
+    return tuple(int(x) if x.isdigit() else x for x in re.split(r"[.-]", v or ""))
+
+
+def newer(a, b):
+    try:
+        return vparse(a) > vparse(b)
+    except TypeError:
+        return a != b
+
+
+# ── restes d'une installation à la main ───────────────────────────────────────────────────
+def hook_commands():
+    out = []
+    for groups in (load_json(SETTINGS, {}).get("hooks") or {}).values():
+        for g in groups or []:
+            out += [h.get("command", "") for h in g.get("hooks", [])]
+    return out
+
+
+def legacy(name, installed):
+    """Ce qu'une installation à la main a laissé et qui ferait doublon avec le plugin."""
+    found, cmds = [], hook_commands()
+    if name == "rename-herdr":
+        if os.path.isdir(os.path.join(SKILLS, "rename-herdr")):
+            found.append("skill copié dans ~/.claude/skills")
+        if any("rename-herdr-version-check" in c for c in cmds):
+            found.append("hook de version dans settings.json")
+        if not installed and os.path.exists(os.path.join(HOME, ".local", "bin", "herdr-session-name-sync")):
+            found.append("script posé à la main")
+    elif name == "usec":
+        if any("usec-watch" in c for c in cmds):
+            found.append("hooks dans settings.json")
+        if "<!-- usec:start" in read_text(CLAUDE_MD):
+            found.append("bloc dans CLAUDE.md")
+        if not installed and os.path.exists(os.path.join(HOME, ".local", "bin", "usec")):
+            found.append("scripts posés à la main")
+    elif name == "simple":
+        if os.path.isdir(os.path.join(SKILLS, "simple")):
+            found.append("skill copié dans ~/.claude/skills")
+    return found
+
+
+def hand_settings(name):
+    """Réglages de l'installation à la main, à reporter sur le plugin (--config clé=valeur)."""
+    if name == "rename-herdr":
+        m = re.search(r"RENAME_HERDR_TARGET=(\w+)",
+                      read_text(os.path.join(HOME, ".config", "systemd", "user", "rename-herdr.service")))
+        if m and m.group(1) in ("pane", "both"):
+            return {"target": m.group(1)}
+    if name == "usec" and any("usec-watch" in c and "--lang en" in c for c in hook_commands()):
+        return {"lang": "en"}
+    return {}
+
+
+def install_command(name):
+    cfg = "".join(f" --config {k}={v}" for k, v in hand_settings(name).items())
+    return f"claude plugin install {name}@{MARKET}{cfg}"
+
+
+def voxtunnel_app():
+    """État de l'application voxtunnel (le plugin n'apporte que le skill)."""
+    parts = []
+    for pkg in ("voxtunnel-server", "voxtunnel"):
+        try:
+            r = subprocess.run(["dpkg-query", "-W", "-f=${Status}\t${Version}", pkg],
+                               capture_output=True, text=True, timeout=5)
+        except Exception:
+            continue
+        if r.returncode == 0 and r.stdout.startswith("install ok installed"):
+            parts.append(f"paquet {pkg} {r.stdout.split(chr(9))[-1]}")
+    loop = re.search(r"^snd_aloop\b", read_text("/proc/modules"), re.M)
+    if not parts:
+        return "snd-aloop chargé, hors paquet (côté serveur fonctionnel)" if loop else "application absente"
+    if any("server" in p for p in parts) and not loop:
+        parts.append("snd-aloop non chargé")
+    return " ; ".join(parts)
+
+
+# ── status ────────────────────────────────────────────────────────────────────────────────
+def status_rows():
+    root = market_dir()
+    if not root:
+        return None
+    decisions = load_json(DECISIONS, {})
+    enabled = load_json(SETTINGS, {}).get("enabledPlugins") or {}
+    rows = []
+    for name, desc, repo in catalog(root):
+        local = installed_version(name)
+        if local is None:
+            state = "non installé"
+        elif enabled.get(f"{name}@{MARKET}") is False:
+            state = "désactivé"
+        elif not repo:
+            state = "installé"
+        elif local == repo:
+            state = "à jour"
+        else:
+            state = "en retard" if newer(repo, local) else "local plus récent"
+        rows.append({"plugin": name, "desc": desc, "repo": repo, "local": local or "", "state": state,
+                     "decision": decisions.get(name, {}).get("install", ""),
+                     "legacy": legacy(name, local is not None),
+                     "install": install_command(name)})
+    return rows
+
+
+def cmd_status(as_json):
+    rows = status_rows()
+    if rows is None:
+        print(f"marketplace {MARKET} introuvable : claude plugin marketplace add <dépôt> (voir bootstrap.sh)",
+              file=sys.stderr)
+        return 1
+    for r in rows:
+        if r["plugin"] == "voxtunnel":
+            r["app"] = voxtunnel_app()
+    auto = auto_update()
+    if as_json:
+        print(json.dumps({"marketplace": market_dir(), "autoUpdate": auto, "plugins": rows},
+                         ensure_ascii=False, indent=2))
+        return 0
+    age = ""
+    stamp = known_marketplace().get("lastUpdated", "")
+    try:
+        t = time.mktime(time.strptime(stamp[:19], "%Y-%m-%dT%H:%M:%S")) - time.timezone
+        age = f", marketplace mise à jour il y a {max(0, int((time.time() - t) / 60))} min"
+    except Exception:
+        pass
+    print(f"remia-tooling : dépôt vs local ({tilde(market_dir())}{age})")
+    print("  mise à jour automatique : " + ("oui" if auto else "NON (/plugin → Marketplaces → remia-tooling → Enable auto-update)"))
+    w = max(len(r["plugin"]) for r in rows)
+    for r in rows:
+        notes = []
+        if r["decision"]:
+            notes.append({"oui": "proposition acceptée", "non": "proposition refusée"}.get(r["decision"], r["decision"]))
+        if r["legacy"]:
+            notes.append("à la main : " + ", ".join(r["legacy"]))
+        if r.get("app"):
+            notes.append("application : " + r["app"])
+        ver = f"{r['repo'] or 'autre dépôt'} / {r['local'] or '—'}"
+        print(f"  {r['plugin']:<{w}}  {ver:<19}  {r['state']}" + ("  [" + " ; ".join(notes) + "]" if notes else ""))
+    print("  (colonnes : plugin, version au dépôt / installée, état)")
+    return 0
+
+
+def cmd_decide(name, choice):
+    root = market_dir()
+    if root and name not in [n for n, _, _ in catalog(root)]:
+        print(f"plugin inconnu : {name} (voir remia-tooling status)", file=sys.stderr)
+        return 2
+    decisions = load_json(DECISIONS, {})
+    if choice in ("oui", "non"):
+        decisions[name] = {"install": choice, "at": time.strftime("%Y-%m-%d")}
+    elif choice == "oubli":
+        decisions.pop(name, None)
+    else:
+        print("choix : oui | non | oubli", file=sys.stderr)
+        return 2
+    save_json(DECISIONS, decisions)
+    print(f"{name} : {choice} mémorisé")
+    return 0
+
+
+# ── migrate ───────────────────────────────────────────────────────────────────────────────
+class Migration:
+    def __init__(self, dry):
+        self.dry = dry
+        self.backup = os.path.join(CONF, "sauvegarde", time.strftime("%Y%m%d-%H%M%S"))
+        self.saved = set()
+        self.done = 0
+
+    def say(self, text):
+        self.done += 1
+        print(("ferait : " if self.dry else "fait   : ") + text)
+
+    def save(self, path):
+        """Copie le fichier dans la sauvegarde avant sa première modification."""
+        if self.dry or path in self.saved or not os.path.exists(path):
+            return
+        os.makedirs(self.backup, exist_ok=True)
+        shutil.copy2(path, os.path.join(self.backup, os.path.basename(path)))
+        self.saved.add(path)
+
+    def move_away(self, path, label):
+        if not os.path.exists(path):
+            return
+        self.say(f"{label} déplacé dans la sauvegarde ({tilde(path)})")
+        if not self.dry:
+            dest = os.path.join(self.backup, "skills")
+            os.makedirs(dest, exist_ok=True)
+            shutil.move(path, os.path.join(dest, os.path.basename(path)))
+
+    def drop_hooks(self, needle, label):
+        data = load_json(SETTINGS, None)
+        if not data or not any(needle in c for c in hook_commands()):
+            return
+        self.say(f"{label} retirés de {tilde(SETTINGS)}")
+        if self.dry:
+            return
+        self.save(SETTINGS)
+        hooks = data.get("hooks", {})
+        for event in list(hooks):
+            for g in hooks[event]:
+                g["hooks"] = [h for h in g.get("hooks", []) if needle not in h.get("command", "")]
+            hooks[event] = [g for g in hooks[event] if g.get("hooks")]
+            if not hooks[event]:
+                del hooks[event]
+        save_json(SETTINGS, data)
+
+    def remove(self, path):
+        if os.path.lexists(path) and not self.dry:
+            shutil.rmtree(path) if os.path.isdir(path) and not os.path.islink(path) else os.remove(path)
+
+    def simple(self):
+        src = os.path.join(SKILLS, "simple")
+        if not os.path.isdir(src):
+            return
+        dest = os.path.join(CONF, "simple")
+        text = read_text(os.path.join(src, "SKILL.md")) or read_text(os.path.join(src, "en", "SKILL.md"))
+        m = PROFILE.search(text)
+        block = m.group(1).strip() if m else ""
+        filled = re.search(r"^- \*\*[^*]+\*\*\s*:\s*(?!_\()\S", block, re.M)
+        profil = os.path.join(dest, "profil.md")
+        if filled and not os.path.exists(profil):
+            self.say(f"profil de simple extrait vers {tilde(profil)}")
+            if not self.dry:
+                os.makedirs(dest, exist_ok=True)
+                with open(profil, "w", encoding="utf-8") as fh:
+                    fh.write(block + "\n")
+        journal = os.path.join(src, "journal.md")
+        if os.path.exists(journal) and not os.path.exists(os.path.join(dest, "journal.md")):
+            self.say(f"journal de simple copié vers {tilde(os.path.join(dest, 'journal.md'))}")
+            if not self.dry:
+                os.makedirs(dest, exist_ok=True)
+                shutil.copy2(journal, os.path.join(dest, "journal.md"))
+        self.move_away(src, "skill simple copié à la main")
+
+    def rename_herdr(self):
+        self.move_away(os.path.join(SKILLS, "rename-herdr"), "skill rename-herdr copié à la main")
+        self.drop_hooks("rename-herdr-version-check", "hook de version de rename_herdr 1.2.0")
+        for p in (os.path.join(CLAUDE, "hooks", "rename-herdr-version-check"),
+                  os.path.join(HOME, ".config", "rename-herdr"),
+                  os.path.join(HOME, ".cache", "rename-herdr", "remote.git"),
+                  os.path.join(HOME, ".cache", "rename-herdr", "remote-version")):
+            self.remove(p)
+
+    def usec(self):
+        self.drop_hooks("usec-watch", "hooks usec-watch")
+        text = read_text(CLAUDE_MD)
+        new = USEC_BLOCK.sub("\n", text)
+        if new != text:
+            self.say(f"bloc usec retiré de {tilde(CLAUDE_MD)}")
+            if not self.dry:
+                self.save(CLAUDE_MD)
+                with open(CLAUDE_MD, "w", encoding="utf-8") as fh:
+                    fh.write(new.rstrip("\n") + "\n")
+
+
+def cmd_migrate(args):
+    dry = "--dry-run" in args
+    names = [a for a in args if not a.startswith("--")]
+    known = {"simple": Migration.simple, "rename-herdr": Migration.rename_herdr, "usec": Migration.usec}
+    for n in names:
+        if n not in known:
+            print(f"rien à migrer pour : {n} (plugins concernés : {', '.join(known)})", file=sys.stderr)
+            return 2
+    names = names or list(known)
+    # les réglages se lisent avant de retirer ce qui les porte (hooks de settings.json)
+    commands = [install_command(n) for n in names if legacy(n, installed_version(n) is not None)
+                and installed_version(n) is None]
+    mig = Migration(dry)
+    for n in names:
+        known[n](mig)
+    if not mig.done:
+        print("rien à migrer : aucune installation à la main en doublon")
+    elif not dry and (mig.saved or os.path.isdir(mig.backup)):
+        print(f"sauvegarde : {tilde(mig.backup)}")
+    if commands:
+        print("ensuite, installer les plugins (les scripts déjà posés sont repris tels quels) :")
+        for c in commands:
+            print("  " + c)
+        print("puis ouvrir une nouvelle session Claude : les hooks d'un plugin se chargent au démarrage.")
+    return 0
+
+
+# ── hooks ─────────────────────────────────────────────────────────────────────────────────
+def session_notice():
+    rows = status_rows()
+    if rows is None:
+        return ""
+    new = [f"{r['plugin']} ({r['desc']})" for r in rows
+           if r["state"] == "non installé" and not r["decision"] and not r["legacy"]]
+    old = [f"{r['plugin']} ({', '.join(r['legacy'])})" for r in rows
+           if r["legacy"] and (r["local"] or r["decision"] != "non")]
+    auto = auto_update()
+    if not new and not old and auto:
+        return ""
+    parts = ["[remia-tooling]"]
+    if new:
+        parts.append("Plugins de la marketplace jamais proposés sur cette machine : " + " ; ".join(new) + ".")
+    if old:
+        parts.append("Installations à la main à migrer vers leur plugin : " + " ; ".join(old) + ".")
+    if not auto:
+        parts.append("La mise à jour automatique de la marketplace remia-tooling est coupée : "
+                     "les plugins ne se mettront pas à jour seuls.")
+    parts.append(
+        "Au début de ta première réponse, le signaler en une ou deux lignes et proposer, sans rien "
+        "installer ni modifier sans accord. Mémoriser chaque réponse pour ne pas redemander : "
+        "`remia-tooling decide <plugin> oui|non`. Procédure : skill remia-tooling.")
+    return " ".join(parts)
+
+
+def mention_notice(event):
+    if not MENTION.search(str(event.get("prompt", ""))):
+        return ""
+    sid = re.sub(r"[^A-Za-z0-9_-]", "", str(event.get("session_id", "x")))[:64] or "x"
+    mark = os.path.join(CACHE, f"mention-{sid}")
+    try:
+        if time.time() - os.path.getmtime(mark) < MENTION_EVERY:
+            return ""
+    except OSError:
+        pass
+    os.makedirs(CACHE, exist_ok=True)
+    for f in os.listdir(CACHE):  # témoins des sessions passées
+        p = os.path.join(CACHE, f)
+        if f.startswith("mention-") and time.time() - os.path.getmtime(p) > 86400:
+            os.remove(p)
+    with open(mark, "a"):
+        os.utime(mark)
+    return ("[remia-tooling] L'utilisateur parle de remia-tooling : avant de répondre, faire le point dépôt "
+            "vs local (`claude plugin marketplace update remia-tooling` puis `remia-tooling status`, skill "
+            "remia-tooling) et le résumer en quelques lignes.")
+
+
+def cmd_hook():
+    try:
+        event = json.load(sys.stdin)
+    except Exception:
+        event = {}
+    name = event.get("hook_event_name", "")
+    try:
+        msg = session_notice() if name == "SessionStart" else mention_notice(event) if name == "UserPromptSubmit" else ""
+    except Exception:
+        msg = ""
+    if msg:
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": name, "additionalContext": msg}},
+                         ensure_ascii=False))
+    return 0
+
+
+def main(argv):
+    cmd = argv[1] if len(argv) > 1 else "status"
+    if cmd == "--version":
+        print(f"remia-tooling {VERSION}")
+        return 0
+    if cmd == "status":
+        return cmd_status("--json" in argv)
+    if cmd == "decide" and len(argv) == 4:
+        return cmd_decide(argv[2], argv[3])
+    if cmd == "migrate":
+        return cmd_migrate(argv[2:])
+    if cmd == "path":
+        root = market_dir()
+        print(root or "")
+        return 0 if root else 1
+    if cmd == "hook":
+        return cmd_hook()
+    print(__doc__.strip())
+    return 0 if cmd in ("-h", "--help") else 2
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
