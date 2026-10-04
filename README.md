@@ -131,7 +131,7 @@ Dans une session, `remia-tooling` est dans le PATH de l'outil Bash. Hors session
 dépôt (ce dépôt, + github.com/remmmi/voxtunnel pour le plugin voxtunnel)
    │  .claude-plugin/marketplace.json : la liste des plugins et où les prendre
    ▼
-Claude Code, au démarrage (mise à jour automatique activée)
+Claude Code, au démarrage d'une session interactive (mise à jour automatique activée)
    │  met à jour son clone de la marketplace, puis les plugins installés dont la version a monté
    ▼
 ~/.claude/plugins/cache/remia-tooling/<plugin>/<version>/      une copie par version
@@ -150,8 +150,13 @@ Trois conséquences à connaître :
 
 - **La version de `plugin.json` commande tout.** Claude Code ne met un plugin à jour que si elle a
   monté ; l'outil n'est remis en place que si elle diffère du témoin.
-- **Une nouvelle version arrive en deux démarrages** : le premier télécharge la mise à jour, le
-  suivant la charge et remet l'outil en place.
+- **Une nouvelle version arrive en deux démarrages** de session interactive : le premier télécharge la
+  mise à jour (« Restart to apply changes »), le suivant la charge et remet l'outil en place. Une session
+  lancée par `claude -p` ne télécharge rien (constaté sur 2.1.289) : une machine qui ne tourne qu'en
+  lots se met à jour par la commande « forcer une mise à jour » ci-dessus.
+- **`remia-tooling status` dit si la machine suit** : âge de la dernière mise à jour de la marketplace,
+  état de la mise à jour automatique, plugins « en retard ». Un plugin qui reste « en retard » après
+  deux démarrages se débloque par la même commande.
 - **Activer un plugin vaut accord pour sa mise en place.** Elle n'écrit que dans `~/.local`,
   `~/.config/systemd/user` et `~/.config/remia-tooling`, sans `sudo`. Exception : `voxtunnel`, dont
   l'application demande `sudo` et un module noyau ; son plugin n'installe rien, son skill le fait à la
@@ -195,7 +200,7 @@ commandes ci-dessus, `claude plugin marketplace remove remia-tooling`, puis `rm 
 |---|---|---|
 | `mise en place en échec` au démarrage | prérequis de l'outil manquant ; la fin de la sortie d'`install.sh` est dans le message | corriger, ouvrir une session ; détail : `<clone>/<outil>/install.sh --check` |
 | plugin installé mais outil absent ou ancien | session ouverte avant l'installation, ou témoin en avance sur la machine | nouvelle session ; sinon supprimer `~/.config/remia-tooling/<plugin>/installed-version` et rouvrir |
-| la machine ne suit plus le dépôt | mise à jour automatique coupée (`remia-tooling status` le dit), ou clé SSH refusée | relancer `bootstrap.sh` ; tester `git ls-remote` du prérequis |
+| la machine ne suit plus le dépôt (`status` : marketplace ancienne, plugin « en retard ») | mise à jour automatique coupée, clé SSH refusée, ou machine qui ne lance que des `claude -p` | relancer `bootstrap.sh` (il met la marketplace à jour et réactive la mise à jour automatique) ; tester `git ls-remote` du prérequis ; forcer la mise à jour du plugin |
 | alertes de quota en double | hooks `usec-watch` restés dans `settings.json` | `remia-tooling migrate usec` |
 | un réglage changé n'a pas d'effet | il se lit au démarrage de session | nouvelle session |
 | `remia-tooling` introuvable | session ouverte avant l'installation de `remia` | chemin complet (plus haut), ou nouvelle session |

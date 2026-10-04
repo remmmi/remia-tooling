@@ -253,6 +253,11 @@ Les sept points « à vérifier en construisant » sont constatés sur le build 
 | Entrée `git-subdir` externe | voxtunnel s'installe, seul le dossier `claude-plugin/` est copié, version lue dans son `plugin.json` |
 | `bin/` dans le PATH de l'outil Bash | constaté dans une session |
 
+Non constaté : le téléchargement automatique d'une nouvelle version au démarrage d'une session
+**interactive** (l'essai s'est fait par sessions `claude -p`, qui ne le déclenchent pas). Le chemin manuel
+(`claude plugin marketplace update` puis `claude plugin update`) est constaté de 1.0.0 à 1.0.1 pour `remia`.
+`simple` est laissé en 1.1.0 sur ce serveur pour l'observer : il doit passer seul en 1.1.1.
+
 Écarts par rapport au design ci-dessus, tous de détail :
 
 - **`remia-tooling migrate`** (non prévu comme commande) : la migration d'une installation à la main
