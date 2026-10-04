@@ -6,21 +6,18 @@ description: >
   d'incompréhension : "je comprends pas", "j'ai rien compris", "c'est quoi X",
   "réexplique", "de quoi tu parles", "et donc ?", "en clair", "tu parles de quoi",
   "je te suis pas", "redis-moi". N'ajoute JAMAIS de détail : change de registre.
-version: 1.0.0
+version: 1.1.0
 ---
 
-<!-- PROFIL:DEBUT — rempli à l'installation (voir INSTALL.md), avec l'accord de l'utilisateur -->
 ## Profil de l'utilisateur
 
-- **Niveau** : _(non renseigné)_
-- **Termes à définir d'office** : _(aucun)_
-- **Stack du projet** : _(non renseignée)_
-- **Ses couches, avec ses mots** : _(non renseignées)_
-<!-- PROFIL:FIN -->
+Avant d'appliquer le protocole, lire `~/.config/remia-tooling/simple/profil.md` : niveau, termes à
+définir d'office, stack, couches de l'utilisateur. Le fichier est propre à la machine et survit aux
+mises à jour du skill.
 
-> Si le profil est encore « non renseigné », **proposer** d'abord de le remplir (procédure :
-> `INSTALL.md`, à côté de ce fichier), puis appliquer le protocole. Ne jamais l'écrire sans
-> l'accord de l'utilisateur.
+> Fichier absent, ou champ « non renseigné » : appliquer le protocole sans profil, puis **proposer**
+> de le remplir (procédure : `INSTALL.md`, à côté de ce fichier). Ne jamais l'écrire sans l'accord de
+> l'utilisateur.
 
 Le profil règle le registre : niveau et termes à définir → ce qu'on explique d'office ;
 stack → d'où tirer le « cas réel nommé » ; couches → le vocabulaire de l'étape 4.
@@ -104,12 +101,12 @@ troisième pavé.
 
 ## Après chaque /simple : apprendre (toujours avec accord)
 
-1. **Journal** — ajouter une ligne à `journal.md`, à côté de ce fichier (le créer au besoin) :
+1. **Journal** — ajouter une ligne à `~/.config/remia-tooling/simple/journal.md` (le créer au besoin) :
    `AAAA-MM-JJ · ce qui a décroché (terme, phrase ou « le pourquoi ») · couche`.
    Jamais de secret, de donnée client ni de nom de personne. Le journal reste sur la machine.
 2. **Profil qui s'enrichit** — si un terme précis a décroché, proposer en une ligne :
-   « J'ajoute *X* aux termes que je définis d'office ? » Sur un oui, l'ajouter dans le bloc
-   Profil, ligne « Termes à définir d'office ».
+   « J'ajoute *X* aux termes que je définis d'office ? » Sur un oui, l'ajouter dans
+   `profil.md`, ligne « Termes à définir d'office ».
 3. **Récurrence** — si le même terme revient 3 fois ou plus dans le journal, le signaler :
    « *X* décroche souvent — on l'ajoute au glossaire du projet ? » (sans rien écrire d'autre
    que ce que l'utilisateur accepte).

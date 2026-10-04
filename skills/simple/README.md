@@ -17,33 +17,40 @@ vocabulaire de l'utilisateur. Déclenché par `/simple` ou par toute formulation
 > en son nom (le « SPF ») ; face au doublon, la messagerie qui reçoit n'en croit aucune. Ça se corrige
 > dans la zone DNS, chez l'hébergeur du domaine — ni votre site ni votre boîte mail ne sont en cause. »
 
+## Installer
+
+Plugin `simple` de la marketplace `remia-tooling` : `/plugin` dans Claude Code, ou
+`claude plugin install simple@remia-tooling`. Rien d'autre à faire ; le skill propose de remplir le
+profil à son premier usage.
+
 ## Fichiers
 
 | Fichier | Rôle |
 |---|---|
-| `SKILL.md` | le skill (français), avec un bloc **Profil** vide |
-| `en/SKILL.md` | le même en anglais |
-| `INSTALL.md` | procédure pour l'agent qui installe ou met à jour : langue, profil déduit des conversations et du projet (proposé, écrit seulement avec accord), profil et journal conservés à la mise à jour |
+| `.claude-plugin/plugin.json` | le plugin (nom, version) |
+| `SKILL.md` | le skill |
+| `INSTALL.md` | procédure pour l'agent qui remplit le profil : déduit des conversations et du projet, proposé, écrit seulement avec accord |
 | `selftest.sh` | autotest : soumet une explication jargonneuse à `claude -p` et vérifie longueur, verdict, jargon, objet réel |
 
 ## Ce que le skill apprend (toujours avec accord)
 
-- **Profil** : niveau, termes à définir d'office, stack, couches de l'utilisateur — rempli à l'installation.
+- **Profil** (`~/.config/remia-tooling/simple/profil.md`) : niveau, termes à définir d'office, stack, couches de l'utilisateur.
 - **Profil qui s'enrichit** : un terme qui a décroché est proposé à l'ajout aux termes à définir d'office.
-- **Journal** (`journal.md`, local) : ce qui a décroché, à chaque `/simple` ; un terme qui revient 3 fois est signalé pour le glossaire du projet.
+- **Journal** (`~/.config/remia-tooling/simple/journal.md`) : ce qui a décroché, à chaque `/simple` ; un terme qui revient 3 fois est signalé pour le glossaire du projet.
 
-Profil et journal restent sur la machine de l'utilisateur : ne jamais les commiter ici.
+Profil et journal restent sur la machine de l'utilisateur, hors du plugin : une mise à jour ne les touche pas.
 
 ## Versions
 
-`version:` dans le frontmatter de `SKILL.md` et `en/SKILL.md`, montées ensemble ; mineure = retouche
-de formulation ou de règle, majeure = changement de comportement visible. `INSTALL.md` § 0 compare
-l'installé au dépôt.
+`version` de `.claude-plugin/plugin.json` et `version:` du frontmatter de `SKILL.md`, montées ensemble
+(`tests/check.sh` le vérifie) ; mineure = retouche de formulation ou de règle, majeure = changement de
+comportement visible.
 
 | Version | Changements |
 |---|---|
+| 1.1.0 | Plugin de la marketplace `remia-tooling`. Le profil et le journal sortent du `SKILL.md` : `~/.config/remia-tooling/simple/` (`remia-tooling migrate simple` reprend ceux d'une installation à la main). Version anglaise retirée. |
 | 1.0.0 | Première version numérotée. |
 
 ## Tester
 
-`./selftest.sh --lang fr` (ou `en`) — nécessite `claude` ; `SIMPLE_MODEL=` pour choisir le modèle.
+`./selftest.sh` — nécessite `claude` ; `SIMPLE_MODEL=` pour choisir le modèle.

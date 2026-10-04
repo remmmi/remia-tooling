@@ -1,40 +1,30 @@
-# Installer / mettre à jour le skill `simple` — procédure pour l'agent qui installe
+# Le profil du skill `simple` — procédure pour l'agent
 
-*(English: same steps — use `en/SKILL.md` and its `PROFILE:START` / `PROFILE:END` markers.)*
+Le skill s'installe et se met à jour comme plugin (`/plugin`, marketplace `remia-tooling`) : il n'y a
+rien à copier. Ce fichier ne décrit que le **profil**, qui règle le registre des explications. Il est
+propre à chaque machine et ne vit pas dans le plugin :
 
-À coller dans l'agent (Claude Code ou équivalent) de la machine cible : « Installe (ou mets à
-jour) le skill `simple` en suivant `skills/simple/INSTALL.md` ». L'agent fait tout, sauf écrire
-le profil sans accord.
+| Fichier | Contenu |
+|---|---|
+| `~/.config/remia-tooling/simple/profil.md` | niveau, termes à définir d'office, stack, couches |
+| `~/.config/remia-tooling/simple/journal.md` | une ligne par `/simple` : ce qui a décroché |
 
-## 0. Déjà installé ? Comparer les versions
+Une mise à jour du plugin ne touche à aucun des deux. Une installation d'avant les plugins
+(`~/.claude/skills/simple/`, profil dans le `SKILL.md`) se reprend par `remia-tooling migrate simple`,
+qui reporte profil et journal à cet endroit.
 
-Version du skill : `version:` dans le frontmatter de `SKILL.md` (et `en/SKILL.md`, montées ensemble).
-Comparer celle de la copie installée (`~/.claude/skills/simple/SKILL.md`, ou le skill de projet) à
-celle de ce dossier ; pas de champ `version:` = antérieur à 1.0.0. Identiques : rien à faire. En
-retard : le dire à l'utilisateur avec les lignes de `README.md` § Versions qui le concernent, puis
-mettre à jour par l'étape 2 (le profil et `journal.md` sont conservés).
+## 1. Forme du fichier
 
-## 1. Choisir la langue
+```markdown
+## Profil de l'utilisateur
 
-Langue dans laquelle l'utilisateur écrit à l'agent (conversations précédentes, CLAUDE.md) :
-français → `SKILL.md` ; sinon → `en/SKILL.md`. En cas de doute, demander.
+- **Niveau** : _(non renseigné)_
+- **Termes à définir d'office** : _(aucun)_
+- **Stack du projet** : _(non renseignée)_
+- **Ses couches, avec ses mots** : _(non renseignées)_
+```
 
-## 2. Copier — sans perdre ce qui est déjà là
-
-Cible par défaut : `~/.claude/skills/simple/` (skill de projet : `<projet>/.claude/skills/simple/`).
-Ne rien écrire ailleurs : ni CLAUDE.md, ni fichier de projet.
-
-**Mise à jour** (un `SKILL.md` existe déjà à la cible) :
-1. extraire le bloc entre `<!-- PROFIL:DEBUT` et `<!-- PROFIL:FIN -->` (ou `PROFILE:START` /
-   `PROFILE:END`) de la copie installée ;
-2. copier la nouvelle version ;
-3. réinjecter le bloc extrait à la place du bloc vide — en ajoutant les lignes que la nouvelle
-   version aurait introduites (ex. « Termes à définir d'office »), laissées vides ;
-4. ne jamais toucher à `journal.md`.
-
-Copier aussi `INSTALL.md` (le skill y renvoie tant que le profil est vide).
-
-## 3. Déduire le profil (lecture seule) — installation neuve, ou profil encore vide
+## 2. Déduire le profil (lecture seule)
 
 **Niveau de compétence** — déduit des conversations précédentes avec cet utilisateur :
 mémoire de l'agent (ex. `~/.claude/projects/*/memory/`), historiques de sessions disponibles,
@@ -55,21 +45,21 @@ accessibles. Nommer les briques et leurs versions quand elles sont lisibles.
 
 Ne rien inventer : un champ sans indice reste « non renseigné » et le dit.
 
-## 4. Proposer, puis écrire seulement avec accord
+## 3. Proposer, puis écrire seulement avec accord
 
-Montrer à l'utilisateur le bloc rempli, avec pour chaque ligne **l'indice qui la justifie**
+Montrer à l'utilisateur le profil rempli, avec pour chaque ligne **l'indice qui la justifie**
 (ex. « a demandé ce qu'est un override le 12/03 »). Lui demander : valider tel quel, corriger,
-ou laisser vide. Puis remplacer dans le `SKILL.md` installé le contenu du bloc Profil — et rien
-d'autre.
+ou laisser vide. Puis écrire `~/.config/remia-tooling/simple/profil.md` — et rien d'autre.
 
-## 5. Confidentialité
+## 4. Confidentialité
 
-Le profil et `journal.md` décrivent une personne : ils restent dans la copie **installée**, sur
-la machine de l'utilisateur. Ne jamais les commiter dans ce dépôt, ni y mettre de nom, d'adresse,
-de secret ou d'identifiant de projet sensible.
+Le profil et le journal décrivent une personne : ils restent sur la machine de l'utilisateur. Ne
+jamais les commiter dans ce dépôt, ni y mettre de nom, d'adresse, de secret ou d'identifiant de
+projet sensible.
 
-## 6. Vérifier
+## 5. Vérifier
 
-- `selftest.sh` (à côté de ce fichier) : contrôle automatique d'un ré-ancrage, si `claude` est installé.
+- `selftest.sh` (à côté de ce fichier, dans un clone du dépôt) : contrôle automatique d'un
+  ré-ancrage, si `claude` est installé.
 - Session suivante : le skill apparaît dans la liste ; `/simple` sur une explication récente
   applique le profil.

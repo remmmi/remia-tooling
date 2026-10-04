@@ -2,7 +2,7 @@
 # Autotest du skill `simple` : soumet une explication jargonneuse + « je n'ai rien compris » à
 # `claude -p` avec le skill en contexte, puis vérifie la réponse par des contrôles déterministes.
 #
-#   ./selftest.sh [--lang fr|en] [--skill <chemin SKILL.md>]
+#   ./selftest.sh [--skill <chemin SKILL.md>]
 #   CLAUDE_BIN=claude  SIMPLE_MODEL=<modèle optionnel>
 #
 # Contrôles : longueur (pas plus que l'original, 110 mots au plus pour un original court) ; première phrase courte (verdict) ;
@@ -10,36 +10,27 @@
 # re-explication. Code retour 0 = tout vert. N'écrit rien, ne touche pas au journal ni au profil.
 set -uo pipefail
 
-LANGUE=fr
 DIR="$(cd "$(dirname "$0")" && pwd)"
-SKILL=""
+SKILL="$DIR/SKILL.md"
 while [ "$#" -gt 0 ]; do
     case "$1" in
-        --lang) LANGUE="$2"; shift 2 ;;
         --skill) SKILL="$2"; shift 2 ;;
-        *) echo "usage: $0 [--lang fr|en] [--skill SKILL.md]" >&2; exit 2 ;;
+        *) echo "usage: $0 [--skill SKILL.md]" >&2; exit 2 ;;
     esac
 done
-[ -n "$SKILL" ] || { [ "$LANGUE" = en ] && SKILL="$DIR/en/SKILL.md" || SKILL="$DIR/SKILL.md"; }
 BIN="${CLAUDE_BIN:-claude}"
 command -v "$BIN" >/dev/null || { echo "claude introuvable ($BIN) : autotest sauté"; exit 0; }
 [ -r "$SKILL" ] || { echo "skill illisible : $SKILL" >&2; exit 2; }
 
-if [ "$LANGUE" = en ]; then
-    AVANT="Your emails from contact@exemple.fr land in spam because the zone publishes two competing v=spf1 records, which yields a PermError at the receiving MTA, so SPF evaluates to none and DMARC fails on alignment even though the DKIM signature itself is valid; merging both includes into a single record fixes the evaluation."
-    USER="I didn't understand anything."
-    MARQUEURS='as I said|actually|to be precise'
-else
-    AVANT="Vos mails de contact@exemple.fr tombent en spam parce que la zone publie deux enregistrements v=spf1 concurrents, ce qui produit un PermError chez le MTA destinataire, donc SPF s'évalue à none et DMARC échoue en alignement alors même que la signature DKIM est valide ; fusionner les deux include dans un seul enregistrement corrige l'évaluation."
-    USER="J'ai rien compris."
-    MARQUEURS='comme je disais|en fait|pour être précis'
-fi
+AVANT="Vos mails de contact@exemple.fr tombent en spam parce que la zone publie deux enregistrements v=spf1 concurrents, ce qui produit un PermError chez le MTA destinataire, donc SPF s'évalue à none et DMARC échoue en alignement alors même que la signature DKIM est valide ; fusionner les deux include dans un seul enregistrement corrige l'évaluation."
+USER="J'ai rien compris."
+MARQUEURS='comme je disais|en fait|pour être précis'
 
 PROMPT="Tu appliques le skill ci-dessous, à la lettre.
 === SKILL ===
 $(cat "$SKILL")
 === FIN DU SKILL ===
-Profil vide : ne propose PAS de le remplir, ne tiens pas de journal (autotest).
+Pas de profil : ne lis aucun fichier, ne propose PAS de le remplir, ne tiens pas de journal (autotest).
 Ton message précédent était :
 « $AVANT »
 L'utilisateur répond : « $USER »
