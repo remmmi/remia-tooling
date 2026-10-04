@@ -11,7 +11,7 @@
 # Code retour : 0 = JSON valide ; 1 = sortie non reconnue (format changé, pas d'abonnement…).
 set -o pipefail
 # Version de l'outil usec (usec, usec-watch, quota_gate.sh), pas du dépôt : voir README § Versions.
-USEC_VERSION=1.0.0
+USEC_VERSION=1.1.0
 
 case "${1:-}" in
   --version) echo "usec $USEC_VERSION"; exit 0 ;;

@@ -2,6 +2,11 @@
 
 *(English: same steps, with `--lang en`.)*
 
+**Chemin normal : le plugin.** `claude plugin install usec@remia-tooling`, puis une nouvelle session :
+le plugin pose les scripts, injecte la règle et branche la surveillance, sans toucher à `settings.json`
+ni à `CLAUDE.md`. Le prérequis du §1 (abonnement) vaut dans les deux cas. La suite décrit l'installation
+à la main depuis un clone, pour une machine sans plugin ; ne pas cumuler les deux (alertes en double).
+
 À coller dans l'agent de la machine cible : « Installe (ou mets à jour) usec en suivant
 `usec/INSTALL.md` ». Relancer la même procédure = mise à jour (tout est idempotent).
 

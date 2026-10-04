@@ -109,5 +109,20 @@ if [ "${1:-}" = "--live" ]; then
   check "live : usec rend du JSON" "usec | python3 -c 'import json,sys; json.load(sys.stdin)[\"quotas\"][0]'"
 fi
 
+# 6. plugin Claude Code : règle en contexte, hook de surveillance
+check "plugin : rule.sh rend la règle, sans les marqueurs" "bash '$HERE/hooks/rule.sh' | grep -q 'usec-watch' && ! bash '$HERE/hooks/rule.sh' | grep -q 'usec:'"
+check "plugin : rule.sh en anglais (réglage lang)"    "CLAUDE_PLUGIN_OPTION_LANG=en bash '$HERE/hooks/rule.sh' | grep -q 'Subscription quotas'"
+check "plugin : rule.sh muet dans un relevé"          "[ -z \"\$(USEC_WATCH_INNER=1 bash '$HERE/hooks/rule.sh')\" ]"
+check "plugin : watch.sh dans un relevé → rc 0, silence" "[ -z \"\$(echo '{}' | USEC_WATCH_INNER=1 bash '$HERE/hooks/watch.sh')\" ]"
+
+# 7. désinstallation (HOME jetable de l'étape 3) : fichiers, hooks posés à la main, bloc CLAUDE.md
+mkdir -p "$T/home/.claude"
+echo '{"hooks":{"PostToolUse":[{"hooks":[{"type":"command","command":"autre"}]}]}}' > "$T/home/.claude/settings.json"
+HOME="$T/home" "$HERE/install.sh" --bin "$T/home/bin" --hooks >/dev/null 2>&1
+HOME="$T/home" "$HERE/install.sh" --bin "$T/home/bin" --claude-md "$T/CLAUDE.md" --uninstall >/dev/null 2>&1
+check "uninstall : scripts et porte retirés"       "[ ! -e '$T/home/bin/usec' ] && [ ! -e '$T/home/bin/usec-watch' ] && [ ! -e '$T/home/.local/share/usec/quota_gate.sh' ]"
+check "uninstall : hooks usec-watch retirés, les autres gardés" "! grep -q usec-watch '$T/home/.claude/settings.json' && grep -q autre '$T/home/.claude/settings.json' && ! grep -q UserPromptSubmit '$T/home/.claude/settings.json'"
+check "uninstall : bloc CLAUDE.md retiré, le reste gardé" "! grep -q 'usec:' '$T/CLAUDE.md' && grep -q 'Règle existante.' '$T/CLAUDE.md'"
+
 echo "$ok ok, $ko KO"
 [ "$ko" -eq 0 ]

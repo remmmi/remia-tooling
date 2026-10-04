@@ -1,0 +1,16 @@
+{
+  "name": "usec",
+  "version": "1.1.0",
+  "description": "Quotas de l'abonnement Claude : surveillance silencieuse (alerte seulement si critique), commande usec en JSON, porte quota pour les lots.",
+  "author": { "name": "remmmi" },
+  "dependencies": ["remia"],
+  "userConfig": {
+    "lang": {
+      "type": "string",
+      "title": "Langue",
+      "description": "Langue de la règle injectée en début de session et des alertes.",
+      "default": "fr",
+      "options": ["fr", "en"]
+    }
+  }
+}
