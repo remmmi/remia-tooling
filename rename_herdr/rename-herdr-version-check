@@ -1,0 +1,47 @@
+#!/usr/bin/env bash
+# Hook SessionStart de Claude Code (posé par install.sh) : signale à l'agent qu'un rename_herdr
+# plus récent existe dans le dépôt. Ne ralentit jamais le démarrage : compare l'installé à la
+# version du dépôt lue au dernier fetch, et relance ce fetch en arrière-plan s'il date de plus
+# de 24 h. Une nouvelle version est donc signalée à la session qui suit le fetch.
+#
+# État : ~/.cache/rename-herdr/remote.git (clone nu minimal), remote-version (dernière lue).
+# Config (écrite par install.sh) : ~/.config/rename-herdr/remote (URL du dépôt), bin (dossier du script).
+# Toujours code 0, silencieux sauf version en retard (JSON additionalContext sur stdout).
+cat >/dev/null 2>&1 || true   # stdin du hook, inutile ici
+
+CACHE="$HOME/.cache/rename-herdr"
+URL=$(cat "$HOME/.config/rename-herdr/remote" 2>/dev/null) || exit 0
+[ -n "$URL" ] || exit 0
+GIT="$CACHE/remote.git"
+FILE="rename_herdr/herdr-session-name-sync"
+vof() { sed -n 's/^VERSION = "\(.*\)"$/\1/p'; }
+
+refresh() {
+  export GIT_SSH_COMMAND="ssh -o BatchMode=yes -o ConnectTimeout=10" GIT_TERMINAL_PROMPT=0
+  mkdir -p "$CACHE"
+  if [ ! -d "$GIT" ]; then
+    git clone -q --bare --depth 1 --filter=blob:none "$URL" "$GIT" || return
+  fi
+  git -C "$GIT" fetch -q --depth 1 origin '+refs/heads/*:refs/heads/*' || return
+  v=$(git -C "$GIT" show "HEAD:$FILE" 2>/dev/null | vof)
+  [ -n "$v" ] && printf '%s' "$v" > "$CACHE/remote-version"
+}
+
+stamp="$CACHE/remote-version"
+if [ ! -f "$stamp" ] || [ -n "$(find "$stamp" -mmin +1440 2>/dev/null)" ]; then
+  touch "$stamp" 2>/dev/null   # une seule relance par fenêtre de 24 h, même si le fetch échoue
+  ( refresh ) >/dev/null 2>&1 </dev/null &
+  disown 2>/dev/null || true
+fi
+
+remote=$(cat "$stamp" 2>/dev/null)
+BIN=$(cat "$HOME/.config/rename-herdr/bin" 2>/dev/null || echo "$HOME/.local/bin")
+inst=$(vof < "$BIN/herdr-session-name-sync" 2>/dev/null)
+[ -n "$remote" ] || exit 0
+[ "$remote" = "${inst:-}" ] && exit 0
+# Plus récent seulement (pas un dépôt en retard sur une installation locale de dev).
+[ "$(printf '%s\n%s\n' "${inst:-0}" "$remote" | sort -V | tail -1)" = "$remote" ] || exit 0
+
+msg="rename_herdr installé ${inst:-<1.1.0}, dépôt $remote : une mise à jour existe. Le signaler à l'utilisateur en une ligne au début de ta première réponse et proposer la mise à jour (skill rename-herdr, section 0) ; ne rien installer sans son accord."
+python3 -c 'import json,sys; print(json.dumps({"hookSpecificOutput":{"hookEventName":"SessionStart","additionalContext":sys.argv[1]}}))' "$msg"
+exit 0

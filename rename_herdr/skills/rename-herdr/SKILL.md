@@ -7,7 +7,7 @@ description: >
   nom d'une session Claude Code à un pane, onglet ou titre herdr. Contient de quoi installer
   depuis le dépôt remia-tooling, diagnostiquer, et reconstruire l'outil sans le dépôt.
   Aussi : "rename_herdr est-il à jour", "mets à jour rename_herdr".
-version: 1.1.0
+version: 1.2.0
 ---
 
 # rename-herdr
@@ -50,7 +50,9 @@ Résumé pour ne pas se tromper d'approche :
 
 ## 0. Est-ce à jour ? (à faire avant tout diagnostic ou toute modification)
 
-L'outil a sa propre version, indépendante du dépôt : `VERSION` dans `herdr-session-name-sync`,
+Depuis 1.2.0, un hook SessionStart (`~/.claude/hooks/rename-herdr-version-check`) le signale tout seul
+en contexte de session quand le dépôt a une version plus récente (fetch en arrière-plan, au plus 1x/24 h).
+Sinon, à la main. L'outil a sa propre version, indépendante du dépôt : `VERSION` dans `herdr-session-name-sync`,
 `version:` dans ce SKILL.md, et l'historique dans `README.md` § Versions.
 
 ```bash

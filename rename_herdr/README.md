@@ -61,6 +61,7 @@ ou option, majeure = changement de comportement visible. `./install.sh --check` 
 
 | Version | Changements |
 |---|---|
+| 1.2.0 | Hook SessionStart posé par `install.sh` (`--no-hook` pour s'en passer) : un agent démarré sur une machine en retard est prévenu qu'une version plus récente existe au dépôt. Fetch en arrière-plan (clone nu minimal dans `~/.cache/rename-herdr/`), au plus une fois par 24 h ; signalé à la session suivant le fetch. `--check` le vérifie, `--uninstall` le retire de `settings.json`. |
 | 1.1.0 | `--version` ; service sans limite de démarrage (`StartLimitIntervalSec=0`, sinon l'unité `.path` mourait en rafale) ; cache par onglet + pane (un `--resume` dans un autre onglet est renommé) ; `install.sh --target` respecté au premier passage ; `--check` compare les versions. À la mise à jour, chaque session nommée est renommée une fois. |
 | 1.0.0 | Première version (sans `--version`). |
 
@@ -70,6 +71,7 @@ ou option, majeure = changement de comportement visible. `./install.sh --check` 
 |---|---|
 | `herdr-session-name-sync` | le script (python3, sans dépendance) |
 | `units/rename-herdr.path`, `units/rename-herdr.service` | déclencheur et service systemd utilisateur |
+| `rename-herdr-version-check` | hook SessionStart : signale une version plus récente au dépôt |
 | `install.sh`, `selftest.sh` | installation idempotente, vérification sans fausse session |
 | `INSTALL.md` | procédure pour l'agent qui installe (Linux) |
 | `TECHNIQUE.md` | la technique sans OS : de quoi reconstruire sur macOS, Windows, ou sans systemd |
