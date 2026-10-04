@@ -6,6 +6,8 @@ description: >
   "installe rename_herdr", "le rename ne renomme plus l'onglet", ou toute demande de lier le
   nom d'une session Claude Code à un pane, onglet ou titre herdr. Contient de quoi installer
   depuis le dépôt remia-tooling, diagnostiquer, et reconstruire l'outil sans le dépôt.
+  Aussi : "rename_herdr est-il à jour", "mets à jour rename_herdr".
+version: 1.1.0
 ---
 
 # rename-herdr
@@ -45,6 +47,22 @@ Résumé pour ne pas se tromper d'approche :
 | autre OS, effet immédiat voulu | `TECHNIQUE.md` § « déclencheur B » (launchd, FileSystemWatcher, watchexec) + le script porté |
 | autre OS, « au prochain message » suffit | `TECHNIQUE.md` § « déclencheur A » : le script en hook `UserPromptSubmit`, zéro service |
 | Windows | **ne pas** utiliser `os.kill(pid, 0)` pour tester un pid : ça tue le processus |
+
+## 0. Est-ce à jour ? (à faire avant tout diagnostic ou toute modification)
+
+L'outil a sa propre version, indépendante du dépôt : `VERSION` dans `herdr-session-name-sync`,
+`version:` dans ce SKILL.md, et l'historique dans `README.md` § Versions.
+
+```bash
+~/.local/bin/herdr-session-name-sync --version     # installé ; aucune ligne "rename_herdr X.Y.Z" = antérieur à 1.1.0
+git -C <clone>/remia-tooling pull -q && sed -n 's/^VERSION = "\(.*\)"$/\1/p' <clone>/remia-tooling/rename_herdr/herdr-session-name-sync
+```
+
+Installé < dépôt : le dire à l'utilisateur avec les entrées de `README.md` § Versions qui le
+concernent, puis `./install.sh` (avec le même `--target` qu'avant : lire
+`Environment=RENAME_HERDR_TARGET` dans `~/.config/systemd/user/rename-herdr.service`, absent = tab).
+Ce SKILL.md lui-même a une `version:` ; si celle du dépôt est plus haute, recopier
+`skills/rename-herdr/` dans `~/.claude/skills/`.
 
 ## 3. Diagnostiquer « l'onglet ne suit plus »
 

@@ -13,7 +13,9 @@ mais une session reprise dans un autre onglet est renommée. Limite : un /rename
 avec le même nom ne change pas `nameSince` (constaté sur 2.1.286) et reste ignoré ;
 sans herdr joignable, sortie silencieuse (code 0).
 
-Options : --dry-run (montre sans renommer), --verbose, --reset (oublie l'état).
+Options : --dry-run (montre sans renommer), --verbose, --reset (oublie l'état),
+--version (affiche `rename_herdr X.Y.Z` et sort ; une version antérieure à 1.1.0
+n'a pas cette option et lance une synchro sans afficher de version).
 Réglage : RENAME_HERDR_TARGET=tab|pane|both (défaut tab), HERDR_BIN=<chemin>.
 """
 import glob
@@ -27,6 +29,8 @@ HOME = os.path.expanduser("~")
 SESSIONS = os.path.join(HOME, ".claude", "sessions")
 STATE = os.path.join(HOME, ".cache", "rename-herdr")
 TARGET = os.environ.get("RENAME_HERDR_TARGET", "tab")
+# Version de l'outil (pas du dépôt) : à monter à chaque changement de comportement, voir README § Versions.
+VERSION = "1.1.0"
 
 
 def find_herdr():
@@ -51,6 +55,9 @@ def alive(pid):
 
 
 def main(argv):
+    if "--version" in argv:
+        print(f"rename_herdr {VERSION}")
+        return 0
     dry = "--dry-run" in argv
     verbose = "--verbose" in argv or dry
     if "--reset" in argv:

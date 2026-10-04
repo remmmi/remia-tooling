@@ -43,6 +43,10 @@ if [ "$MODE" = check ]; then
   command -v python3 >/dev/null && ok "python3" || { ko "python3 absent"; rc=1; }
   systemctl --user is-system-running >/dev/null 2>&1 && ok "systemd --user joignable" || { ko "systemd --user injoignable (pas de session utilisateur ? voir INSTALL.md § Debian)"; rc=1; }
   [ -x "$BIN/herdr-session-name-sync" ] && ok "$BIN/herdr-session-name-sync" || { ko "script absent"; rc=1; }
+  repo_v=$(sed -n 's/^VERSION = "\(.*\)"$/\1/p' "$HERE/herdr-session-name-sync")
+  inst_v=$(sed -n 's/^VERSION = "\(.*\)"$/\1/p' "$BIN/herdr-session-name-sync" 2>/dev/null)
+  if [ "${inst_v:-}" = "$repo_v" ]; then ok "version $inst_v (= dépôt)"
+  else ko "version installée ${inst_v:-<1.1.0} != dépôt $repo_v (relancer ./install.sh après git pull)"; rc=1; fi
   cmp -s "$HERE/herdr-session-name-sync" "$BIN/herdr-session-name-sync" 2>/dev/null && ok "script identique au dépôt" || ko "script différent du dépôt (relancer ./install.sh)"
   [ "$(systemctl --user is-active rename-herdr.path 2>/dev/null)" = active ] && ok "rename-herdr.path actif" || { ko "rename-herdr.path inactif"; rc=1; }
   [ "$(systemctl --user is-enabled rename-herdr.path 2>/dev/null)" = enabled ] && ok "rename-herdr.path activé au login" || ko "rename-herdr.path non activé au login"

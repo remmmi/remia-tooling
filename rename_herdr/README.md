@@ -53,6 +53,17 @@ décrite dans [`TECHNIQUE.md`](TECHNIQUE.md) : signal, appariement, action, et u
 déclencheurs par plateforme (launchd, FileSystemWatcher, watchexec) plus une variante portable par
 hook Claude Code. Un agent qui lit ce fichier peut reconstruire l'outil sans rien d'autre.
 
+## Versions
+
+Version de l'outil, pas du dépôt : `VERSION` dans `herdr-session-name-sync` (affichée par
+`--version`) et `version:` dans `skills/rename-herdr/SKILL.md`, montées ensemble. Mineure = correctif
+ou option, majeure = changement de comportement visible. `./install.sh --check` compare l'installé au dépôt.
+
+| Version | Changements |
+|---|---|
+| 1.1.0 | `--version` ; service sans limite de démarrage (`StartLimitIntervalSec=0`, sinon l'unité `.path` mourait en rafale) ; cache par onglet + pane (un `--resume` dans un autre onglet est renommé) ; `install.sh --target` respecté au premier passage ; `--check` compare les versions. À la mise à jour, chaque session nommée est renommée une fois. |
+| 1.0.0 | Première version (sans `--version`). |
+
 ## Contenu
 
 | Fichier | Rôle |
