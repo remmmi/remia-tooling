@@ -9,8 +9,9 @@ dossier, retrouve l'onglet herdr qui héberge la session et le renomme.
 Règles : seuls les noms `nameSource: user` comptent ; chaque /rename n'est appliqué
 qu'une fois par onglet (état ~/.cache/rename-herdr/<sessionId> = onglet, pane et
 horodatage `nameSince` du /rename), donc un libellé changé à la main ensuite reste,
-mais un /rename refait (même nom) ou une session reprise dans un autre onglet
-s'appliquent ; sans herdr joignable, sortie silencieuse (code 0).
+mais une session reprise dans un autre onglet est renommée. Limite : un /rename refait
+avec le même nom ne change pas `nameSince` (constaté sur 2.1.286) et reste ignoré ;
+sans herdr joignable, sortie silencieuse (code 0).
 
 Options : --dry-run (montre sans renommer), --verbose, --reset (oublie l'état).
 Réglage : RENAME_HERDR_TARGET=tab|pane|both (défaut tab), HERDR_BIN=<chemin>.
@@ -93,8 +94,8 @@ def main(argv):
                 print(f"{sid[:8]} '{name}' : pas de pane herdr pour cette session")
             continue
         state_file = os.path.join(STATE, sid)
-        # Clé = où et quel /rename : un --resume dans un autre onglet, ou un /rename refait
-        # avec le même nom (nouveau nameSince), doivent réappliquer.
+        # Clé = où et quel /rename : un --resume dans un autre onglet doit réappliquer.
+        # nameSince ne bouge que si le nom change (2.1.286) : gardé pour le jour où il bougera.
         stamp = f"{agent['tab_id']} {agent['pane_id']} {meta.get('nameSince', '')}\n{name}"
         try:
             with open(state_file, encoding="utf-8") as fh:

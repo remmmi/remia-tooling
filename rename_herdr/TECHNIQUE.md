@@ -77,9 +77,13 @@ fichier par session dans un dossier de cache) et n'agir que s'il change. Un `/re
 un renommage manuel survit jusqu'au `/rename` suivant.
 
 La clé mémorisée n'est pas le nom seul : c'est (onglet, pane, `nameSince`, nom). `nameSince` est
-l'horodatage du `/rename` dans le fichier de session. Avec le nom seul, deux cas cassent : une
-session reprise (`--resume`, même sessionId) dans un autre onglet ne serait jamais renommée, et un
-`/rename` refait avec le même nom après un renommage manuel serait ignoré.
+l'horodatage du `/rename` dans le fichier de session. Avec le nom seul, une session reprise
+(`--resume`, même sessionId) dans un autre onglet ne serait jamais renommée.
+
+Limite connue : un `/rename` refait avec **le même nom** ne change pas `nameSince` (constaté sur
+2.1.286), et aucun autre champ du fichier de session ne bouge. Après un renommage manuel de
+l'onglet, refaire `/rename foo` avec le même nom ne le réapplique donc pas : passer par un autre nom,
+ou `herdr-session-name-sync --reset`.
 
 ## Le déclencheur : la seule partie qui dépend de l'OS
 
