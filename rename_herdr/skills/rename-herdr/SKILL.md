@@ -4,10 +4,10 @@ description: >
   Faire suivre le libellé d'onglet herdr au /rename d'une session Claude Code. Déclenche sur
   "l'onglet herdr ne suit pas le rename", "renomme l'onglet quand je renomme la session",
   "installe rename_herdr", "le rename ne renomme plus l'onglet", ou toute demande de lier le
-  nom d'une session Claude Code à un pane, onglet ou titre herdr. Contient de quoi installer
-  depuis le dépôt remia-tooling, diagnostiquer, et reconstruire l'outil sans le dépôt.
+  nom d'une session Claude Code à un pane, onglet ou titre herdr. Contient de quoi vérifier la
+  mise en place faite par le plugin, diagnostiquer, et reconstruire l'outil sur une autre plateforme.
   Aussi : "rename_herdr est-il à jour", "mets à jour rename_herdr".
-version: 1.2.0
+version: 1.3.0
 ---
 
 # rename-herdr
@@ -15,20 +15,21 @@ version: 1.2.0
 Objectif : quand l'utilisateur tape `/rename foo` dans Claude Code, l'onglet herdr qui héberge
 cette session s'appelle `foo` dans la seconde. Rien d'autre ne bouge.
 
-Avec le dépôt sur Linux : §1 puis §3. Sur une autre plateforme, ou sans le dépôt : §2, qui renvoie
-à `TECHNIQUE.md`, le document agnostique dont ce dossier est l'implémentation Linux.
+Ce skill vient avec le plugin `rename-herdr` (marketplace `remia-tooling`). Le plugin met l'outil en
+place tout seul ; ce skill sert à vérifier (§0, §1), diagnostiquer (§3) et reconstruire ailleurs (§2).
+Les fichiers cités (`install.sh`, `INSTALL.md`, `TECHNIQUE.md`, `README.md`) sont à la racine du plugin,
+deux dossiers au-dessus de ce fichier.
 
-## 1. Installer depuis le dépôt (cas normal)
+## 1. Mise en place (faite par le plugin)
 
-```bash
-git clone git@github.com:remmmi/remia-tooling.git   # ou mise à jour d'un clone existant
-cd remia-tooling/rename_herdr && ./install.sh && ./selftest.sh   # attendu : "0 KO"
-```
+Au démarrage de session, le plugin compare sa version et son réglage `target` au témoin
+`~/.config/remia-tooling/rename-herdr/installed-version` ; s'ils diffèrent, il lance `install.sh`
+(idempotent) : `~/.local/bin/herdr-session-name-sync`, `~/.config/systemd/user/rename-herdr.{path,service}`,
+activation, premier passage. Une ligne `[remia-tooling] rename-herdr X.Y.Z mis en place` le signale.
 
-`install.sh` est idempotent (relancer = mettre à jour). Il pose `~/.local/bin/herdr-session-name-sync`
-et `~/.config/systemd/user/rename-herdr.{path,service}`, active l'unité, fait un premier passage.
-Puis demander à l'utilisateur un `/rename` dans une session ouverte sous herdr : l'onglet doit suivre.
-Détails de la procédure et des choix à lui soumettre : `INSTALL.md` à côté de ce fichier.
+Forcer une remise en place : supprimer le témoin et ouvrir une nouvelle session, ou lancer
+`install.sh --target <tab|pane|both>` à la main. Changer la cible : `/plugin` → rename-herdr →
+Configure. Prérequis (herdr et son intégration Claude, systemd utilisateur, python3) : `INSTALL.md` §1.
 
 ## 2. Reconstruire ailleurs (macOS, Windows, Linux sans systemd)
 
@@ -50,21 +51,16 @@ Résumé pour ne pas se tromper d'approche :
 
 ## 0. Est-ce à jour ? (à faire avant tout diagnostic ou toute modification)
 
-Depuis 1.2.0, un hook SessionStart (`~/.claude/hooks/rename-herdr-version-check`) le signale tout seul
-en contexte de session quand le dépôt a une version plus récente (fetch en arrière-plan, au plus 1x/24 h).
-Sinon, à la main. L'outil a sa propre version, indépendante du dépôt : `VERSION` dans `herdr-session-name-sync`,
-`version:` dans ce SKILL.md, et l'historique dans `README.md` § Versions.
-
 ```bash
-~/.local/bin/herdr-session-name-sync --version     # installé ; aucune ligne "rename_herdr X.Y.Z" = antérieur à 1.1.0
-git -C <clone>/remia-tooling pull -q && sed -n 's/^VERSION = "\(.*\)"$/\1/p' <clone>/remia-tooling/rename_herdr/herdr-session-name-sync
+~/.local/bin/herdr-session-name-sync --version               # ce qui tourne
+cat ~/.config/remia-tooling/rename-herdr/installed-version   # ce que le plugin a mis en place, et avec quelle cible
+remia-tooling status                                         # version au dépôt vs version du plugin
 ```
 
-Installé < dépôt : le dire à l'utilisateur avec les entrées de `README.md` § Versions qui le
-concernent, puis `./install.sh` (avec le même `--target` qu'avant : lire
-`Environment=RENAME_HERDR_TARGET` dans `~/.config/systemd/user/rename-herdr.service`, absent = tab).
-Ce SKILL.md lui-même a une `version:` ; si celle du dépôt est plus haute, recopier
-`skills/rename-herdr/` dans `~/.claude/skills/`.
+Les trois doivent s'accorder. Script en retard sur le plugin : la mise en place a échoué au dernier
+démarrage (le message de démarrage donne la raison) ; `install.sh --check` détaille. Plugin en retard
+sur le dépôt : `claude plugin update rename-herdr@remia-tooling`, puis nouvelle session. Historique :
+`README.md` § Versions.
 
 ## 3. Diagnostiquer « l'onglet ne suit plus »
 
@@ -72,7 +68,7 @@ Dans l'ordre, s'arrêter au premier `[!!]` :
 
 ```bash
 ~/.local/bin/herdr-session-name-sync --dry-run --verbose   # qui serait renommé, et pourquoi pas
-./install.sh --check                                        # fichiers, unité, herdr joignable
+<racine du plugin>/install.sh --check                       # fichiers, unité, herdr joignable
 ```
 
 Lectures : « pas de pane herdr pour cette session » = intégration herdr/claude absente (TECHNIQUE.md, appariement) ou

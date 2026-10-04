@@ -1,0 +1,12 @@
+{
+  "description": "Met en place rename_herdr (script + unité systemd utilisateur) quand la version ou le réglage change",
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          { "type": "command", "command": "bash \"${CLAUDE_PLUGIN_ROOT}/hooks/setup.sh\"", "timeout": 60 }
+        ]
+      }
+    ]
+  }
+}

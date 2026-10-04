@@ -1,0 +1,16 @@
+{
+  "name": "rename-herdr",
+  "version": "1.3.0",
+  "description": "L'onglet herdr (ou le pane) suit le /rename de la session Claude Code, dans la seconde. Linux, systemd utilisateur, herdr >= 0.8.",
+  "author": { "name": "remmmi" },
+  "dependencies": ["remia"],
+  "userConfig": {
+    "target": {
+      "type": "string",
+      "title": "Ce qui est renommé",
+      "description": "tab : l'onglet herdr. pane : le libellé du pane. both : les deux. Pris en compte au démarrage de session suivant.",
+      "default": "tab",
+      "options": ["tab", "pane", "both"]
+    }
+  }
+}

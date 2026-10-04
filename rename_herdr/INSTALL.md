@@ -1,5 +1,10 @@
 # Installer / mettre à jour rename_herdr — procédure pour l'agent qui installe
 
+**Chemin normal : le plugin.** `claude plugin install rename-herdr@remia-tooling` (ajouter
+`--config target=both` pour renommer aussi le pane), puis une nouvelle session : le plugin lance
+`install.sh` lui-même et le relance à chaque nouvelle version. Les prérequis du §1 valent dans les deux
+cas. La suite décrit l'installation à la main depuis un clone, pour une machine sans plugin.
+
 À coller dans l'agent de la machine cible : « Installe rename_herdr en suivant
 `rename_herdr/INSTALL.md` ». Relancer la même procédure = mise à jour (tout est idempotent).
 
@@ -32,8 +37,8 @@ l'utilisateur un `/rename` dans une session ouverte sous herdr et regarder
 
 ## 4. Skill
 
-Copier `skills/rename-herdr/` dans `~/.claude/skills/` (avec accord). Il sert au diagnostic
-(« l'onglet ne suit plus ») et contient de quoi reconstruire l'outil sans ce dépôt.
+Le skill `rename-herdr` (diagnostic « l'onglet ne suit plus ») vient avec le plugin. Ne pas le copier
+dans `~/.claude/skills/` : il ferait doublon le jour où le plugin est installé.
 
 ## 5. Confidentialité
 
