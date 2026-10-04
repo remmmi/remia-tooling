@@ -32,6 +32,7 @@ st() { "$R" status --json | python3 -c "import json,sys; d=json.load(sys.stdin);
 hk() { printf '{"hook_event_name":"%s","session_id":"%s","prompt":"%s"}' "$1" "${2:-s1}" "${3:-}" | "$R" hook; }
 
 check "status : remia à jour, les autres non installés" "st \"r['remia']['state']=='à jour' and r['alpha']['state']=='non installé' and r['ext']['state']=='non installé' and r['ext']['repo']==''\""
+check "status : commande d'installation avec les réglages par défaut, explicites" "st \"r['usec']['install']=='claude plugin install usec@remia-tooling --config lang=fr' and r['rename-herdr']['install'].endswith('--config target=tab') and r['simple']['install']=='claude plugin install simple@remia-tooling'\""
 check "hook session : propose les plugins jamais proposés" "hk SessionStart | grep -q 'jamais proposés sur cette machine : alpha (outil alpha)' && hk SessionStart | grep -q 'ext (ailleurs)'"
 for p in alpha usec simple rename-herdr ext; do "$R" decide "$p" non >/dev/null; done
 check "refus mémorisés → silence"                 "[ -z \"\$(hk SessionStart)\" ]"

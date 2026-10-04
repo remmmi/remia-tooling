@@ -2,11 +2,11 @@
 name: simple
 description: >
   Rejouer la dernière explication dans un registre concret quand l'utilisateur ne
-  l'a pas comprise. Déclenche sur /simple, et sur toute formulation
+  l'a pas comprise. Déclenche sur /simple:simple, et sur toute formulation
   d'incompréhension : "je comprends pas", "j'ai rien compris", "c'est quoi X",
   "réexplique", "de quoi tu parles", "et donc ?", "en clair", "tu parles de quoi",
   "je te suis pas", "redis-moi". N'ajoute JAMAIS de détail : change de registre.
-version: 1.1.0
+version: 1.1.1
 ---
 
 ## Profil de l'utilisateur
@@ -70,7 +70,7 @@ base. »
 Verdict en tête, un objet réel (`/panier`, le bouton), le mécanisme vu depuis l'écran, un seul
 terme technique défini dans la phrase même, la couche nommée. Trois lignes au lieu d'un pavé.
 
-## Interdits pendant /simple
+## Interdits pendant un ré-ancrage
 
 - Rallonger. Si la 1re version faisait 20 lignes, la 2e en fait 8. Si elle tenait en une ou deux
   phrases denses, la 2e tient en **6 phrases courtes, 110 mots au plus** — on retire du jargon, on

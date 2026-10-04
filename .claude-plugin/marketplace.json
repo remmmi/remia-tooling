@@ -23,7 +23,7 @@
     {
       "name": "simple",
       "source": "./skills/simple",
-      "description": "Skill /simple : rejouer une explication ratée dans un registre concret."
+      "description": "Skill /simple:simple : rejouer une explication ratée dans un registre concret."
     },
     {
       "name": "voxtunnel",

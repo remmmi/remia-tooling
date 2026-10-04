@@ -1,6 +1,7 @@
 # remia-tooling en marketplace de plugins Claude Code — design
 
-Date : 2026-10-04. Statut : design validé en conversation, spec à relire avant le plan.
+Date : 2026-10-04. Statut : **réalisé** le 2026-10-04 (voir « Réalisation » en fin de document). La
+procédure d'usage est dans le README à la racine ; ce document garde la conception et ses raisons.
 
 ## But
 
@@ -238,12 +239,36 @@ repli si la vérification échoue.
 | Une entrée `git-subdir` vers un dépôt externe s'installe et se met à jour comme les autres | entrée `url` sur le dépôt entier (le plugin embarque alors tout le dépôt, images comprises) |
 | `bin/` du plugin dans le PATH de l'outil Bash | le skill appelle `remia-tooling` par son chemin complet |
 
-## État du travail en cours (à reprendre)
+## Réalisation (2026-10-04)
 
-Clone de travail : `~/remia-tooling`. Dernier commit poussé : `a9957ee`. Non commité au moment
-d'écrire cette spec :
+Les sept points « à vérifier en construisant » sont constatés sur le build 2.1.289, sans recours aux replis :
 
-- `rename_herdr/` : passage en 1.3.0 (hook de version retiré, nettoyage de l'ancien) — à garder ;
-- `remia/` : gestionnaire maison (CLI avec clone géré, `install.sh`, skill, selftest) — à
-  réécrire selon cette spec ; le selftest et la logique de décisions sont réutilisables ;
-- `tools.json` : registre du gestionnaire maison — à supprimer.
+| Point | Constat |
+|---|---|
+| Skill à la racine du plugin `simple` | reconnu ; son nom est `simple:simple` (un skill de plugin porte toujours le préfixe du plugin, le repli n'y aurait rien changé) |
+| `userConfig` vers les hooks | `CLAUDE_PLUGIN_OPTION_TARGET=both` reçu par le hook : témoin `1.3.0 --target both`, unité réécrite |
+| Clone de la marketplace, forme de `installed_plugins.json` | conformes ; `remia` lit `installLocation` dans `known_marketplaces.json` |
+| Activation d'autoUpdate | clé `autoUpdate` de l'entrée `extraKnownMarketplaces` de `settings.json` et de `known_marketplaces.json` (ce qu'écrit le bouton de `/plugin`) ; `bootstrap.sh` écrit les deux |
+| `dependencies: ["remia"]` | installe `remia` avec le plugin |
+| Entrée `git-subdir` externe | voxtunnel s'installe, seul le dossier `claude-plugin/` est copié, version lue dans son `plugin.json` |
+| `bin/` dans le PATH de l'outil Bash | constaté dans une session |
+
+Écarts par rapport au design ci-dessus, tous de détail :
+
+- **`remia-tooling migrate`** (non prévu comme commande) : la migration d'une installation à la main
+  était décrite comme une procédure du skill. C'est une commande, testée dans un HOME jetable, parce
+  qu'elle édite `settings.json` et `CLAUDE.md` et doit se rejouer à l'identique sur chaque machine.
+  Elle sauvegarde avant de toucher et affiche les commandes d'installation avec les réglages d'avant.
+- **`usec/install.sh --uninstall`** ajouté : le nettoyage après désactivation en avait besoin.
+- **Dépôt voxtunnel** : une ligne ajoutée à `.github/workflows/smoke.yml` pour que la CI lance le test
+  de version (le design disait « sans toucher aux fichiers existants »). Aucun fichier du client, du
+  serveur ni des paquets n'est modifié ; les paquets construits ne contiennent pas le dossier du plugin.
+  Le commit porte l'identité déjà publique de ce dépôt, pas celle de ce serveur.
+- **Réglages toujours explicites à l'installation** (`--config lang=fr`) : sans valeur, Claude Code
+  signale une option « not yet set » même quand le manifeste donne un défaut.
+- Versions publiées : `remia` 1.0.1, `rename-herdr` 1.3.0, `usec` 1.1.0, `simple` 1.1.1, `voxtunnel` 1.3.0.
+
+Ce serveur est migré : marketplace ajoutée, mise à jour automatique activée, `remia`, `rename-herdr`
+(`target=both`), `usec` et `simple` installés en plugins, restes de l'installation à la main retirés
+(sauvegarde dans `~/.config/remia-tooling/sauvegarde/`). `voxtunnel` reste à proposer : c'est `remia`
+qui le fait au démarrage de session.

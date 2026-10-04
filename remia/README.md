@@ -52,4 +52,5 @@ montées ensemble (`tests/check.sh` le vérifie).
 
 | Version | Changements |
 |---|---|
+| 1.0.1 | Les commandes d'installation proposées donnent toujours les réglages (`--config target=…`, `--config lang=…`), y compris par défaut : sans cela Claude Code signale une option « not yet set ». |
 | 1.0.0 | Première version, en plugin de la marketplace. |

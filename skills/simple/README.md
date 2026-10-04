@@ -2,7 +2,8 @@
 
 Quand l'utilisateur dit « j'ai rien compris », l'agent ne re-explique pas plus longuement : il
 **ré-ancre**. Verdict en une phrase, un objet réel nommé, le mécanisme vu depuis l'écran, le
-vocabulaire de l'utilisateur. Déclenché par `/simple` ou par toute formulation d'incompréhension.
+vocabulaire de l'utilisateur. Déclenché par `/simple:simple` (taper `/simple` suffit, la complétion
+le propose) ou, sans commande, par toute formulation d'incompréhension.
 
 ## Avant / après
 
@@ -48,6 +49,7 @@ comportement visible.
 
 | Version | Changements |
 |---|---|
+| 1.1.1 | La commande est `/simple:simple` (un skill de plugin porte le nom du plugin en préfixe) : description et docs corrigées. |
 | 1.1.0 | Plugin de la marketplace `remia-tooling`. Le profil et le journal sortent du `SKILL.md` : `~/.config/remia-tooling/simple/` (`remia-tooling migrate simple` reprend ceux d'une installation à la main). Version anglaise retirée. |
 | 1.0.0 | Première version numérotée. |
 

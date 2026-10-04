@@ -7,7 +7,7 @@ description: >
   Déclenche sur toute mention de remia-tooling ou "remia", "mes tools", "mes outils du dépôt",
   "qu'est-ce qui est à jour", "installe <outil du dépôt>", "mets à jour mes outils", "migre cette
   machine", et sur un message [remia-tooling] injecté par un hook.
-version: 1.0.0
+version: 1.0.1
 ---
 
 # remia-tooling
@@ -88,7 +88,7 @@ systemd restent en place : le premier démarrage de session les réécrit à la 
 |---|---|
 | rename-herdr | `cat ~/.config/remia-tooling/rename-herdr/installed-version` ; `systemctl --user is-active rename-herdr.path` ; un `/rename` fait suivre l'onglet |
 | usec | `cat ~/.config/remia-tooling/usec/installed-version` ; `usec-watch status` |
-| simple | `/simple` apparaît dans la liste des skills |
+| simple | `/simple:simple` apparaît dans la liste des skills |
 | tous | `remia-tooling status` : tout « à jour », plus aucun « à la main » |
 
 Un message `[remia-tooling] <plugin> X : mise en place en échec` au démarrage donne la fin de la sortie

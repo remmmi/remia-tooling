@@ -61,5 +61,5 @@ projet sensible.
 
 - `selftest.sh` (à côté de ce fichier, dans un clone du dépôt) : contrôle automatique d'un
   ré-ancrage, si `claude` est installé.
-- Session suivante : le skill apparaît dans la liste ; `/simple` sur une explication récente
+- Session suivante : le skill apparaît dans la liste ; `/simple:simple` sur une explication récente
   applique le profil.
