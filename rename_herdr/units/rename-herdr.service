@@ -1,5 +1,9 @@
 [Unit]
 Description=rename_herdr : sync nom de session Claude Code -> libellé d'onglet herdr
+# Le dossier surveillé est réécrit à chaque busy/idle de chaque session : les démarrages
+# arrivent en rafale. Sans ceci, la limite par défaut (5 en 10 s) est atteinte et
+# rename-herdr.path passe en échec (unit-start-limit-hit) : il cesse de surveiller.
+StartLimitIntervalSec=0
 
 [Service]
 Type=oneshot

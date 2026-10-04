@@ -6,9 +6,11 @@ Claude Code n'a pas d'événement de hook sur `/rename` : il écrit le nom dans
 lancé par l'unité systemd utilisateur `rename-herdr.path` à chaque écriture dans ce
 dossier, retrouve l'onglet herdr qui héberge la session et le renomme.
 
-Règles : seuls les noms `nameSource: user` comptent ; un nom n'est appliqué qu'une
-fois (état ~/.cache/rename-herdr/<sessionId>), donc un libellé changé à la main
-ensuite reste ; sans herdr joignable, sortie silencieuse (code 0).
+Règles : seuls les noms `nameSource: user` comptent ; chaque /rename n'est appliqué
+qu'une fois par onglet (état ~/.cache/rename-herdr/<sessionId> = onglet, pane et
+horodatage `nameSince` du /rename), donc un libellé changé à la main ensuite reste,
+mais un /rename refait (même nom) ou une session reprise dans un autre onglet
+s'appliquent ; sans herdr joignable, sortie silencieuse (code 0).
 
 Options : --dry-run (montre sans renommer), --verbose, --reset (oublie l'état).
 Réglage : RENAME_HERDR_TARGET=tab|pane|both (défaut tab), HERDR_BIN=<chemin>.
@@ -91,12 +93,15 @@ def main(argv):
                 print(f"{sid[:8]} '{name}' : pas de pane herdr pour cette session")
             continue
         state_file = os.path.join(STATE, sid)
+        # Clé = où et quel /rename : un --resume dans un autre onglet, ou un /rename refait
+        # avec le même nom (nouveau nameSince), doivent réappliquer.
+        stamp = f"{agent['tab_id']} {agent['pane_id']} {meta.get('nameSince', '')}\n{name}"
         try:
             with open(state_file, encoding="utf-8") as fh:
                 last = fh.read()
         except Exception:
             last = None
-        if last == name:
+        if last == stamp:
             if verbose:
                 print(f"{agent['tab_id']} '{name}' : déjà appliqué")
             continue
@@ -110,7 +115,7 @@ def main(argv):
             ok &= run("pane", "rename", agent["pane_id"], name).returncode == 0
         if ok:
             with open(state_file, "w", encoding="utf-8") as fh:
-                fh.write(name)
+                fh.write(stamp)
             print(f"{agent['tab_id']} -> {name}")
         else:
             print(f"{agent['tab_id']} : échec du renommage en '{name}'", file=sys.stderr)

@@ -72,9 +72,14 @@ tester `herdr agent list` depuis ce contexte avant d'aller plus loin.
 | `herdr agent rename <cible> <name>` | nom d'agent pour le CLI (`[a-z][a-z0-9_-]{0,31}`, unique) | non : ce n'est pas de l'affichage |
 
 Le déclencheur tire souvent (voir (1)). Renommer à chaque passage écraserait un libellé changé à la
-main entre deux `/rename`. Règle : mémoriser le dernier nom appliqué **par sessionId** (un petit
+main entre deux `/rename`. Règle : mémoriser le dernier `/rename` appliqué **par sessionId** (un petit
 fichier par session dans un dossier de cache) et n'agir que s'il change. Un `/rename` gagne toujours ;
 un renommage manuel survit jusqu'au `/rename` suivant.
+
+La clé mémorisée n'est pas le nom seul : c'est (onglet, pane, `nameSince`, nom). `nameSince` est
+l'horodatage du `/rename` dans le fichier de session. Avec le nom seul, deux cas cassent : une
+session reprise (`--resume`, même sessionId) dans un autre onglet ne serait jamais renommée, et un
+`/rename` refait avec le même nom après un renommage manuel serait ignoré.
 
 ## Le déclencheur : la seule partie qui dépend de l'OS
 
@@ -129,8 +134,9 @@ pour chaque fichier sessions/*.json :
     si meta.nameSource != "user" : suivant
     si pid mort : suivant                       (attention Windows, voir (1))
     a = par_sid[meta.sessionId]                 (absent : suivant)
-    si cache[sessionId] == meta.name : suivant
-    herdr tab rename a.tab_id meta.name ; cache[sessionId] = meta.name
+    cle = (a.tab_id, a.pane_id, meta.nameSince, meta.name)
+    si cache[sessionId] == cle : suivant
+    herdr tab rename a.tab_id meta.name ; cache[sessionId] = cle
 ```
 
 L'implémentation de référence, `herdr-session-name-sync` (python3, sans dépendance, ~90 lignes),
