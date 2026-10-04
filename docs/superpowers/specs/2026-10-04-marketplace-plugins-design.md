@@ -15,7 +15,7 @@ En plus de ce que `/plugin` fait déjà :
 - refaire le point dépôt contre local quand l'utilisateur parle de remia-tooling.
 
 Critère de réussite : sur une machine neuve, `bootstrap.sh` puis une session Claude suffisent pour
-qu'un outil activé dans `/plugin` soit en place et se mette à jour seul.
+qu'un outil activé dans `/plugin` soit en place et se mette à jour seul (sauf voxtunnel, voir sa section).
 
 ## Décisions prises
 
@@ -24,7 +24,8 @@ qu'un outil activé dans `/plugin` soit en place et se mette à jour seul.
 | Distribution | marketplace native (`.claude-plugin/marketplace.json`), pas de gestionnaire maison |
 | Plateformes | Linux + systemd utilisateur partout : pas de mode de repli sans systemd |
 | Mise en place système | automatique au démarrage de session ; activer le plugin vaut accord |
-| Premier lot | `remia`, `rename-herdr`, `usec`, `simple` |
+| Premier lot | `remia`, `rename-herdr`, `usec`, `simple`, `voxtunnel` |
+| voxtunnel | reste dans son dépôt public (`github.com/remmmi/voxtunnel`) ; la marketplace y pointe par une entrée à source externe |
 | `simple` en anglais | abandonné ; `skills/simple/en/` est supprimé du dépôt (reste dans l'historique git) |
 | Mod | aucun : `/plugin` est l'interface, et aucun événement de mod ne se déclenche sur `/rename` (types du build 2.1.286) |
 | prismText, ctrlmajMDTerm | hors lot, installés à la main, signalés dans le README racine |
@@ -35,7 +36,7 @@ qu'un outil activé dans `/plugin` soit en place et se mette à jour seul.
 Additif : aucun dossier existant ne bouge.
 
 ```
-.claude-plugin/marketplace.json      name: "remia-tooling", 4 plugins en chemins relatifs
+.claude-plugin/marketplace.json      name: "remia-tooling", 4 plugins en chemins relatifs + voxtunnel en source externe
 bootstrap.sh                         machine neuve : marketplace + autoUpdate + plugin remia
 README.md                            racine : ce qu'est le dépôt, bootstrap, outils hors marketplace
 tests/check.sh                       versions cohérentes + claude plugin validate sur chaque plugin
@@ -105,6 +106,36 @@ installe pas ; il signale seulement qu'autoUpdate est coupé.
   remplir (procédure d'`INSTALL.md`, inchangée sur le fond).
 - `en/` supprimé.
 
+### voxtunnel (dépôt externe)
+
+Voxtunnel n'est pas un outil pour Claude : c'est une application système (client à icône sur le
+poste, carte son virtuelle `snd-aloop` côté serveur), avec ses paquets Debian, ses releases GitHub
+et sa propre mise à jour depuis le client. Le plugin n'y ajoute qu'un skill.
+
+- Dans le dépôt voxtunnel, un dossier `claude-plugin/` : `.claude-plugin/plugin.json` (version =
+  `__version__` de `client/voxtunnel-tray.py`) et `skills/voxtunnel/SKILL.md`.
+- Entrée de la marketplace :
+  `{"source": "git-subdir", "url": "https://github.com/remmmi/voxtunnel.git", "path": "claude-plugin"}`.
+  Dépôt public en https : aucune clé SSH nécessaire.
+- Skill `voxtunnel` : reconnaître le rôle de la machine (serveur ou poste), installer avec accord
+  depuis la dernière release (`voxtunnel-server_*.deb` ou `voxtunnel_*.deb`), vérifier
+  (`aplay -l | grep Loopback`, enregistrement test), diagnostiquer, revenir en arrière. Reprend les
+  règles de `server/CLAUDE.md` et `client/CLAUDE.md` (ne jamais toucher à la config audio existante,
+  pas de redémarrage).
+- **Pas de mise en place automatique** : l'installation demande `sudo` et charge un module noyau.
+  C'est l'exception à la règle du lot ; elle se fait par le skill, à la demande, avec accord.
+- Les mises à jour de l'application restent celles de voxtunnel (client → release, serveur poussé
+  depuis le client). Le plugin ne met à jour que le skill.
+- `remia-tooling status` signale en plus l'état de l'application : paquet `voxtunnel-server` ou
+  `voxtunnel` installé et sa version, ou `snd-aloop` chargé sans paquet.
+- Un test dans le dépôt voxtunnel (`tests/`) échoue si la version du `plugin.json` diffère de
+  `__version__`.
+- Pas de dépendance à `remia` : le plugin doit rester installable depuis le dépôt voxtunnel seul.
+
+État de ce serveur au 2026-10-04 : `snd-aloop` chargé et persistant (mis en place à la main en
+août), paquet `voxtunnel-server` non installé. Le skill doit reconnaître ce cas comme
+« fonctionnel, hors paquet » et proposer le paquet sans l'imposer.
+
 ## Mise en place automatique (`plugin-setup.sh`)
 
 Appelé par le hook `SessionStart` de `rename-herdr` et de `usec`.
@@ -156,7 +187,8 @@ version), usec 1.0.0 (hooks + bloc CLAUDE.md), simple 1.0.0 (profil rempli), ski
   changement, sinon les machines ne se mettent pas à jour.
 - `tests/check.sh` échoue si la version de `plugin.json` diffère de celle du script ou du
   `SKILL.md` de l'outil, ou si l'entrée de `marketplace.json` en déclare une autre.
-- Versions de départ : `remia` 1.0.0, `rename-herdr` 1.3.0, `usec` 1.1.0, `simple` 1.1.0.
+- Versions de départ : `remia` 1.0.0, `rename-herdr` 1.3.0, `usec` 1.1.0, `simple` 1.1.0,
+  `voxtunnel` 1.3.0 (sa version actuelle ; ajouter le plugin ne change pas l'application).
 
 ## Tests
 
@@ -173,6 +205,9 @@ version), usec 1.0.0 (hooks + bloc CLAUDE.md), simple 1.0.0 (profil rempli), ski
   les hooks d'un plugin ne se chargent qu'au démarrage d'une session).
 
 ## Limites acceptées
+
+- Le plugin voxtunnel demande un commit dans le dépôt public `remmmi/voxtunnel` : à pousser
+  seulement avec accord explicite au moment de l'implémentation.
 
 - Désactiver ou désinstaller un plugin arrête ses hooks mais ne retire pas ce qu'il a posé
   (unité systemd, scripts dans `~/.local`). Nettoyage par le skill `remia-tooling`.
@@ -193,6 +228,7 @@ repli si la vérification échoue.
 | Chemin du clone de la marketplace (`~/.claude/plugins/marketplaces/remia-tooling/`) et forme de `installed_plugins.json` | lire `known_marketplaces.json` (`installLocation`), constaté présent sur ce serveur |
 | Activation d'autoUpdate par `bootstrap.sh` (clé `autoUpdate` de `known_marketplaces.json` ou `extraKnownMarketplaces` de `settings.json`) | le dire à l'utilisateur : `/plugin` → Marketplaces → activer la mise à jour automatique |
 | `dependencies: ["remia"]` installe bien `remia` avec le plugin | `remia` installé par `bootstrap.sh` seulement, les plugins fonctionnent sans lui |
+| Une entrée `git-subdir` vers un dépôt externe s'installe et se met à jour comme les autres | entrée `url` sur le dépôt entier (le plugin embarque alors tout le dépôt, images comprises) |
 | `bin/` du plugin dans le PATH de l'outil Bash | le skill appelle `remia-tooling` par son chemin complet |
 
 ## État du travail en cours (à reprendre)
