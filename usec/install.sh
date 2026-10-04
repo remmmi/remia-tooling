@@ -5,6 +5,7 @@
 #   ./install.sh --hooks [SETTINGS]      + hooks usec-watch (UserPromptSubmit, PostToolUse) dans
 #                                          ce settings.json (défaut ~/.claude/settings.json)
 #   ./install.sh --claude-md FICHIER     + insère/remplace le bloc usec dans ce CLAUDE.md
+#   ./install.sh --check                 constate seulement : version installée vs dépôt, fichiers, hooks
 #   options : --bin DIR (défaut ~/.local/bin)  --lib DIR (défaut ~/.local/share/usec)
 #             --lang fr|en (bloc CLAUDE.md et alertes, défaut fr)
 #
@@ -19,6 +20,7 @@ LIB="$HOME/.local/share/usec"
 CLAUDE_MD=""
 SETTINGS=""
 LANG_MD=fr
+MODE=install
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -28,11 +30,27 @@ while [ $# -gt 0 ]; do
     --hooks)     if [ $# -ge 2 ] && [ "${2#--}" = "$2" ]; then SETTINGS=$2; shift 2
                  else SETTINGS="$HOME/.claude/settings.json"; shift; fi ;;
     --lang)      LANG_MD=$2; shift 2 ;;
-    -h|--help)   sed -n '2,13p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    --check)     MODE=check; shift ;;
+    -h|--help)   sed -n '2,14p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
     *) echo "argument inconnu : $1 (voir --help)" >&2; exit 2 ;;
   esac
 done
 case "$LANG_MD" in fr|en) ;; *) echo "--lang : fr ou en" >&2; exit 2 ;; esac
+
+if [ "$MODE" = check ]; then
+  rc=0; ok() { echo "[ok] $*"; }; ko() { echo "[!!] $*"; rc=1; }
+  repo_v=$(sed -n 's/^USEC_VERSION=//p' "$HERE/usec")
+  inst_v=$(sed -n 's/^USEC_VERSION=//p' "$BIN/usec" 2>/dev/null)
+  if [ ! -x "$BIN/usec" ]; then ko "$BIN/usec absent"
+  elif [ "$inst_v" = "$repo_v" ]; then ok "version $inst_v (= dépôt)"
+  else ko "version installée ${inst_v:-<1.0.0} != dépôt $repo_v (relancer ./install.sh, avec les mêmes options qu'à l'installation)"; fi
+  for f in "$BIN/usec:$HERE/usec" "$BIN/usec-watch:$HERE/usec-watch" "$LIB/quota_gate.sh:$HERE/quota_gate.sh"; do
+    cmp -s "${f%%:*}" "${f#*:}" && ok "${f%%:*} identique au dépôt" || ko "${f%%:*} absent ou différent du dépôt"
+  done
+  grep -qs usec-watch "$HOME/.claude/settings.json" && ok "hooks usec-watch présents dans ~/.claude/settings.json" \
+    || echo "[--] hooks usec-watch absents de ~/.claude/settings.json (optionnels : --hooks)"
+  exit $rc
+fi
 
 # ── prérequis
 python3 -c 'import sys, zoneinfo; zoneinfo.ZoneInfo("UTC"); sys.exit(sys.version_info < (3, 9))' \

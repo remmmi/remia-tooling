@@ -6,6 +6,7 @@ description: >
   d'incompréhension : "je comprends pas", "j'ai rien compris", "c'est quoi X",
   "réexplique", "de quoi tu parles", "et donc ?", "en clair", "tu parles de quoi",
   "je te suis pas", "redis-moi". N'ajoute JAMAIS de détail : change de registre.
+version: 1.0.0
 ---
 
 <!-- PROFIL:DEBUT — rempli à l'installation (voir INSTALL.md), avec l'accord de l'utilisateur -->

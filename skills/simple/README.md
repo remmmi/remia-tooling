@@ -34,6 +34,16 @@ vocabulaire de l'utilisateur. Déclenché par `/simple` ou par toute formulation
 
 Profil et journal restent sur la machine de l'utilisateur : ne jamais les commiter ici.
 
+## Versions
+
+`version:` dans le frontmatter de `SKILL.md` et `en/SKILL.md`, montées ensemble ; mineure = retouche
+de formulation ou de règle, majeure = changement de comportement visible. `INSTALL.md` § 0 compare
+l'installé au dépôt.
+
+| Version | Changements |
+|---|---|
+| 1.0.0 | Première version numérotée. |
+
 ## Tester
 
 `./selftest.sh --lang fr` (ou `en`) — nécessite `claude` ; `SIMPLE_MODEL=` pour choisir le modèle.

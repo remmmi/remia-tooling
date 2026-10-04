@@ -19,7 +19,7 @@ $ usec
 | `usec-watch` | surveillance silencieuse par hook Claude Code : relevé en arrière-plan, projection, alerte seulement si critique ; `status` = dernier relevé sans appel |
 | `quota_gate.sh` | porte quota à sourcer dans un script qui enchaîne des `claude -p` : pause propre au seuil |
 | `claude-md.fr.md`, `claude-md.en.md` | la règle à mettre dans CLAUDE.md : quand lire `usec`, quels seuils |
-| `install.sh` | installe les scripts ; `--hooks` branche usec-watch dans settings.json, `--claude-md` pose la règle |
+| `install.sh` | installe les scripts ; `--hooks` branche usec-watch dans settings.json, `--claude-md` pose la règle, `--check` compare l'installé au dépôt |
 | `INSTALL.md` | procédure pour l'agent qui installe sur une nouvelle machine |
 | `selftest.sh` | autotest sans quota consommé (fixture) ; `--live` pour un vrai appel |
 
@@ -53,6 +53,17 @@ for id in $(cat ids.txt); do usec_gate || { echo "pause : $(usec_gate_motif)"; b
 ```
 
 Seuils : `USEC_GATE_SESSION_MAX` (70), `USEC_GATE_WEEK_MAX` (85). Cache 120 s partagé entre workers.
+
+## Versions
+
+Version de l'outil (usec, usec-watch, quota_gate.sh ensemble), pas du dépôt : `USEC_VERSION` dans
+`usec`, affichée par `usec --version`. Mineure = correctif ou option, majeure = changement de
+comportement visible (format JSON, seuils par défaut, hooks). `./install.sh --check` compare
+l'installé au dépôt. Un `usec` qui répond « argument inconnu » à `--version` est antérieur à 1.0.0.
+
+| Version | Changements |
+|---|---|
+| 1.0.0 | Première version numérotée : `usec --version`, `install.sh --check`. |
 
 ## Pièges
 

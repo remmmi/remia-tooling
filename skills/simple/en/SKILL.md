@@ -6,6 +6,7 @@ description: >
   "I didn't understand", "what is X", "explain again", "what are you talking about",
   "so what?", "in plain words", "I'm lost", "say that again". NEVER add detail:
   change the register.
+version: 1.0.0
 ---
 
 <!-- PROFILE:START — filled at install time (see INSTALL.md), with the user's consent -->

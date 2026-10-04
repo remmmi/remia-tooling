@@ -6,6 +6,14 @@
 jour) le skill `simple` en suivant `skills/simple/INSTALL.md` ». L'agent fait tout, sauf écrire
 le profil sans accord.
 
+## 0. Déjà installé ? Comparer les versions
+
+Version du skill : `version:` dans le frontmatter de `SKILL.md` (et `en/SKILL.md`, montées ensemble).
+Comparer celle de la copie installée (`~/.claude/skills/simple/SKILL.md`, ou le skill de projet) à
+celle de ce dossier ; pas de champ `version:` = antérieur à 1.0.0. Identiques : rien à faire. En
+retard : le dire à l'utilisateur avec les lignes de `README.md` § Versions qui le concernent, puis
+mettre à jour par l'étape 2 (le profil et `journal.md` sont conservés).
+
 ## 1. Choisir la langue
 
 Langue dans laquelle l'utilisateur écrit à l'agent (conversations précédentes, CLAUDE.md) :

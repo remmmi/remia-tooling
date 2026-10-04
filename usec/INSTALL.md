@@ -5,6 +5,14 @@
 À coller dans l'agent de la machine cible : « Installe (ou mets à jour) usec en suivant
 `usec/INSTALL.md` ». Relancer la même procédure = mise à jour (tout est idempotent).
 
+## 0. Déjà installé ? Comparer les versions
+
+`usec --version` (installé) contre `USEC_VERSION=` dans `usec` de ce dossier, ou directement
+`./install.sh --check`. Une réponse « argument inconnu » = antérieur à 1.0.0. Installé en retard :
+le dire à l'utilisateur avec les lignes de `README.md` § Versions qui le concernent, puis relancer
+les étapes ci-dessous avec les **mêmes options** qu'avant (hooks présents dans settings.json →
+`--hooks` ; bloc `<!-- usec:start` dans un CLAUDE.md → `--claude-md <ce fichier>` ; langue du bloc → `--lang`).
+
 ## 1. Prérequis
 
 - `claude` (Claude Code) connecté **avec un abonnement** : avec une clé API, `/usage` n'a pas de

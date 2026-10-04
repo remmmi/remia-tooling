@@ -16,6 +16,8 @@ check "parse : session 42 %, reset ISO avec fuseau" \
 check "parse : sortie non reconnue → rc 1" \
   "! echo 'rien à voir' | '$HERE/usec' --stdin >/dev/null 2>&1"
 
+check "version : usec --version"              "'$HERE/usec' --version | grep -qE '^usec [0-9]+\\.[0-9]+\\.[0-9]+$'"
+
 # 2. porte quota, avec un faux usec qui rend la fixture
 printf '#!/bin/sh\ncat "%s"\n' "$T/q.json" > "$T/fake_usec"; chmod +x "$T/fake_usec"
 gate() { ( export USEC_BIN="$1" USEC_GATE_DIR="$T/gate" USEC_GATE_SESSION_MAX="$2" USEC_GATE_WEEK_MAX="$3"
@@ -34,6 +36,8 @@ done
 check "install : script et porte copiés"      "[ -x '$T/home/bin/usec' ] && [ -f '$T/home/.local/share/usec/quota_gate.sh' ]"
 check "install : un seul bloc après 2 passes" "[ \$(grep -c 'usec:start' '$T/CLAUDE.md') -eq 1 ]"
 check "install : contenu existant conservé"   "grep -q 'Règle existante.' '$T/CLAUDE.md'"
+
+check "install --check : version égale au dépôt" "HOME='$T/home' '$HERE/install.sh' --bin '$T/home/bin' --check | grep '^\\[ok\\] version' >/dev/null"
 
 # 4. usec-watch : état construit à la main (W = dossier d'état, mk = relevé + historique)
 W="$T/watch"; export USEC_WATCH_DIR="$W"
