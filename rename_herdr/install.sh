@@ -75,5 +75,5 @@ systemctl --user daemon-reload
 systemctl --user enable --now rename-herdr.path >/dev/null
 systemctl --user restart rename-herdr.path
 echo "unité rename-herdr.path : $(systemctl --user is-active rename-herdr.path)"
-"$BIN/herdr-session-name-sync" --verbose || true
+RENAME_HERDR_TARGET=$TARGET "$BIN/herdr-session-name-sync" --verbose || true
 echo "vérifier : ./selftest.sh ; diagnostic : ./install.sh --check ; journal : journalctl --user -u rename-herdr.service -n 20"
