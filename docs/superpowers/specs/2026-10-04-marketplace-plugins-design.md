@@ -206,8 +206,15 @@ version), usec 1.0.0 (hooks + bloc CLAUDE.md), simple 1.0.0 (profil rempli), ski
 
 ## Limites acceptées
 
-- Le plugin voxtunnel demande un commit dans le dépôt public `remmmi/voxtunnel` : à pousser
-  seulement avec accord explicite au moment de l'implémentation.
+- Le plugin voxtunnel demande un commit dans le dépôt public `remmmi/voxtunnel`. Accord donné le
+  2026-10-04, à deux conditions, vérifiées avant de pousser :
+  - **rien de secret** : le dépôt est public. Aucun nom de machine, d'utilisateur, d'hôte SSH,
+    d'adresse IP, de chemin personnel ni de détail de ce VPS dans le `plugin.json`, le skill ou le
+    message de commit. Relecture du diff complet avant le push ;
+  - **rien de cassé pour qui installe depuis le dépôt** (paquets Debian, `client/install.sh`,
+    `server/setup-vps.sh`, releases) : le changement est un dossier `claude-plugin/` ajouté et un
+    test de version, sans toucher aux fichiers existants ; `build-deb.sh` ne doit pas embarquer
+    ce dossier dans les paquets ; les tests et la CI du dépôt restent verts.
 
 - Désactiver ou désinstaller un plugin arrête ses hooks mais ne retire pas ce qu'il a posé
   (unité systemd, scripts dans `~/.local`). Nettoyage par le skill `remia-tooling`.
