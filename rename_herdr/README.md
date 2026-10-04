@@ -74,6 +74,7 @@ ou option, majeure = changement de comportement visible. `./install.sh --check` 
 
 | Version | Changements |
 |---|---|
+| 1.3.1 | `install.sh` accepte un systemd utilisateur « degraded » (comme le README l'annonce) au lieu de le prendre pour injoignable, et fait `reset-failed` avant d'activer l'unité : une unité d'avant la 1.1.0 morte en rafale (`unit-start-limit-hit`) rendait systemd « degraded » et bloquait sa propre mise en place. Même correctif dans `bootstrap.sh`. |
 | 1.3.0 | Plugin de la marketplace `remia-tooling` : installation et mises à jour par `/plugin`, réglage `target` dans le plugin, mise en place automatique au démarrage de session. Le hook de version de la 1.2.0 est retiré (et nettoyé à l'installation). |
 | 1.2.0 | Hook SessionStart posé par `install.sh` (`--no-hook` pour s'en passer) : un agent démarré sur une machine en retard est prévenu qu'une version plus récente existe au dépôt. Fetch en arrière-plan (clone nu minimal dans `~/.cache/rename-herdr/`), au plus une fois par 24 h ; signalé à la session suivant le fetch. `--check` le vérifie, `--uninstall` le retire de `settings.json`. |
 | 1.1.0 | `--version` ; service sans limite de démarrage (`StartLimitIntervalSec=0`, sinon l'unité `.path` mourait en rafale) ; cache par onglet + pane (un `--resume` dans un autre onglet est renommé) ; `install.sh --target` respecté au premier passage ; `--check` compare les versions. À la mise à jour, chaque session nommée est renommée une fois. |

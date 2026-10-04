@@ -198,6 +198,7 @@ commandes ci-dessus, `claude plugin marketplace remove remia-tooling`, puis `rm 
 
 | Symptôme | Cause probable | Faire |
 |---|---|---|
+| `mise en place en échec` au démarrage, `systemd --user injoignable` alors que `systemctl --user is-system-running` répond `degraded` | version de rename-herdr < 1.3.1 (prenait `degraded` pour injoignable) | `claude plugin marketplace update remia-tooling && claude plugin update rename-herdr@remia-tooling`, nouvelle session ; au besoin `systemctl --user reset-failed` |
 | `mise en place en échec` au démarrage | prérequis de l'outil manquant ; la fin de la sortie d'`install.sh` est dans le message | corriger, ouvrir une session ; détail : `<clone>/<outil>/install.sh --check` |
 | plugin installé mais outil absent ou ancien | session ouverte avant l'installation, ou témoin en avance sur la machine | nouvelle session ; sinon supprimer `~/.config/remia-tooling/<plugin>/installed-version` et rouvrir |
 | la machine ne suit plus le dépôt (`status` : marketplace ancienne, plugin « en retard ») | mise à jour automatique coupée, clé SSH refusée, ou machine qui ne lance que des `claude -p` | relancer `bootstrap.sh` (il met la marketplace à jour et réactive la mise à jour automatique) ; tester `git ls-remote` du prérequis ; forcer la mise à jour du plugin |

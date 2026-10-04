@@ -18,6 +18,9 @@ UNITS="$HOME/.config/systemd/user"
 MODE=install
 TARGET=tab
 
+# systemd utilisateur joignable : « running » ou « degraded » (une unité en échec rend « degraded », rc 1)
+user_systemd_ok() { case "$(systemctl --user is-system-running 2>/dev/null)" in running|degraded) return 0 ;; *) return 1 ;; esac; }
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --bin)       BIN=$2; shift 2 ;;
@@ -67,7 +70,7 @@ fi
 if [ "$MODE" = check ]; then
   rc=0
   command -v python3 >/dev/null && ok "python3" || { ko "python3 absent"; rc=1; }
-  systemctl --user is-system-running >/dev/null 2>&1 && ok "systemd --user joignable" || { ko "systemd --user injoignable (pas de session utilisateur ? voir INSTALL.md § Debian)"; rc=1; }
+  user_systemd_ok && ok "systemd --user joignable" || { ko "systemd --user injoignable (pas de session utilisateur ? voir INSTALL.md § Debian)"; rc=1; }
   [ -x "$BIN/herdr-session-name-sync" ] && ok "$BIN/herdr-session-name-sync" || { ko "script absent"; rc=1; }
   repo_v=$(sed -n 's/^VERSION = "\(.*\)"$/\1/p' "$HERE/herdr-session-name-sync")
   inst_v=$(sed -n 's/^VERSION = "\(.*\)"$/\1/p' "$BIN/herdr-session-name-sync" 2>/dev/null)
@@ -84,7 +87,7 @@ fi
 
 # ── prérequis
 command -v python3 >/dev/null || { echo "python3 requis (Debian : apt install python3)" >&2; exit 1; }
-systemctl --user is-system-running >/dev/null 2>&1 || {
+user_systemd_ok || {
   echo "systemd --user injoignable : il faut une session utilisateur (login, ou 'loginctl enable-linger $USER'), voir INSTALL.md" >&2; exit 1; }
 
 # ── fichiers
@@ -101,8 +104,10 @@ echo "installé : $BIN/herdr-session-name-sync"
 echo "installé : $UNITS/rename-herdr.path, $UNITS/rename-herdr.service"
 legacy_hook_cleanup
 
-# ── activation (idempotent) + premier passage
+# ── activation (idempotent) + premier passage. reset-failed : une unité d'une version antérieure morte en
+#    rafale (unit-start-limit-hit) resterait « failed » et bloquerait la réactivation.
 systemctl --user daemon-reload
+systemctl --user reset-failed rename-herdr.path rename-herdr.service 2>/dev/null || true
 systemctl --user enable --now rename-herdr.path >/dev/null
 systemctl --user restart rename-herdr.path
 echo "unité rename-herdr.path : $(systemctl --user is-active rename-herdr.path)"

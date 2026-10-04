@@ -30,7 +30,7 @@ SESSIONS = os.path.join(HOME, ".claude", "sessions")
 STATE = os.path.join(HOME, ".cache", "rename-herdr")
 TARGET = os.environ.get("RENAME_HERDR_TARGET", "tab")
 # Version de l'outil (pas du dépôt) : à monter à chaque changement de comportement, voir README § Versions.
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 
 
 def find_herdr():

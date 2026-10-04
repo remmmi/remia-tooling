@@ -31,7 +31,8 @@ for c in claude git python3; do
   command -v "$c" >/dev/null && ok "$c" || { ko "$c introuvable"; missing=1; }
 done
 [ "$missing" = 0 ] || { echo "prérequis manquants : rien n'a été modifié" >&2; exit 1; }
-systemctl --user is-system-running >/dev/null 2>&1 && ok "systemd utilisateur joignable" \
+# « degraded » (rc 1) = joignable avec une unité en échec : ne pas le confondre avec « injoignable »
+case "$(systemctl --user is-system-running 2>/dev/null)" in running|degraded) ok "systemd utilisateur joignable" ;; *) false ;; esac \
   || ko "systemd utilisateur injoignable : rename-herdr ne pourra pas se mettre en place (sudo loginctl enable-linger $USER)"
 case "$URL" in
   /*|./*|../*) [ -f "$URL/.claude-plugin/marketplace.json" ] && ok "marketplace locale : $URL" \

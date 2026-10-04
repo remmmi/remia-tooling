@@ -7,7 +7,7 @@ description: >
   nom d'une session Claude Code à un pane, onglet ou titre herdr. Contient de quoi vérifier la
   mise en place faite par le plugin, diagnostiquer, et reconstruire l'outil sur une autre plateforme.
   Aussi : "rename_herdr est-il à jour", "mets à jour rename_herdr".
-version: 1.3.0
+version: 1.3.1
 ---
 
 # rename-herdr
