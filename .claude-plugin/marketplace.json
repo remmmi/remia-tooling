@@ -1,0 +1,40 @@
+{
+  "name": "remia-tooling",
+  "owner": { "name": "remmmi" },
+  "metadata": {
+    "description": "Outils pour Claude Code sur les VPS et postes de travail (Linux, systemd utilisateur)"
+  },
+  "plugins": [
+    {
+      "name": "remia",
+      "source": "./remia",
+      "description": "Le point dépôt vs local : propose les plugins jamais proposés sur cette machine (réponses mémorisées), signale les installations à la main à migrer."
+    },
+    {
+      "name": "rename-herdr",
+      "source": "./rename_herdr",
+      "description": "L'onglet herdr (ou le pane) suit le /rename de la session Claude Code."
+    },
+    {
+      "name": "usec",
+      "source": "./usec",
+      "description": "Quotas de l'abonnement Claude : surveillance silencieuse, alerte seulement si critique."
+    },
+    {
+      "name": "simple",
+      "source": "./skills/simple",
+      "description": "Skill /simple : rejouer une explication ratée dans un registre concret."
+    },
+    {
+      "name": "voxtunnel",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/remmmi/voxtunnel.git",
+        "path": "claude-plugin",
+        "ref": "main"
+      },
+      "description": "Voxtunnel : le micro du poste, par SSH, vers la carte son virtuelle d'un serveur. Skill d'installation et de diagnostic.",
+      "homepage": "https://github.com/remmmi/voxtunnel"
+    }
+  ]
+}
