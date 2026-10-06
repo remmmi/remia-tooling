@@ -21,9 +21,10 @@ same "rename-herdr : plugin.json = herdr-session-name-sync" "$(manifest rename_h
 same "rename-herdr : plugin.json = SKILL.md"              "$(manifest rename_herdr)" "$(front rename_herdr/skills/rename-herdr/SKILL.md)"
 same "usec : plugin.json = USEC_VERSION"                  "$(manifest usec)" "$(sed -n 's/^USEC_VERSION=//p' usec/usec)"
 same "simple : plugin.json = SKILL.md"                    "$(manifest skills/simple)" "$(front skills/simple/SKILL.md)"
+same "chatroom : plugin.json = SKILL.md"                  "$(manifest skills/chatroom)" "$(front skills/chatroom/SKILL.md)"
 
 # ── chaque version figure dans le tableau « Versions » du README de l'outil
-for d in remia rename_herdr usec skills/simple; do
+for d in remia rename_herdr usec skills/simple skills/chatroom; do
   v=$(manifest "$d")
   grep -q "^| $v |" "$d/README.md" && good "$d/README.md : ligne $v dans Versions" || bad "$d/README.md : pas de ligne $v dans Versions"
 done

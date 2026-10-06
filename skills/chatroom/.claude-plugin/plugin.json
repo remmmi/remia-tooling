@@ -1,0 +1,6 @@
+{
+  "name": "chatroom",
+  "version": "1.0.0",
+  "description": "Skill chatroom : rejoindre un salon Agent Room (URL agent-room.com ou code) focus et terse, ecouter, travailler par le board, ne sortir que sur « au revoir » de l'hote.",
+  "author": { "name": "remmmi" }
+}

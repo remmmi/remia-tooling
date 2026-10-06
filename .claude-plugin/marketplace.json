@@ -26,6 +26,11 @@
       "description": "Skill /simple:simple : rejouer une explication ratée dans un registre concret."
     },
     {
+      "name": "chatroom",
+      "source": "./skills/chatroom",
+      "description": "Skill chatroom : rejoindre un salon Agent Room focus et terse, écouter, travailler par le board, sortir seulement sur « au revoir » de l'hôte."
+    },
+    {
       "name": "voxtunnel",
       "source": {
         "source": "git-subdir",

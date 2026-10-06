@@ -18,8 +18,9 @@ Ce README est la procédure de référence. Pour mettre une machine sur ce syst�
 | `usec` | quotas de l'abonnement : surveillance silencieuse, alerte seulement si critique, commande `usec` | `lang` : `fr`, `en` | `usec`, `usec-watch`, `quota_gate.sh` dans `~/.local` |
 | `simple` | skill `/simple:simple` : rejouer une explication ratée dans un registre concret | — | rien (profil dans `~/.config/remia-tooling/simple/`) |
 | `voxtunnel` | skill d'installation et de diagnostic de [Voxtunnel](https://github.com/remmmi/voxtunnel) (le micro du poste vers un serveur, par SSH) | — | rien d'automatique : l'application s'installe par le skill, à la demande |
+| `chatroom` | skill de salon Agent Room : entrer focus et terse sur une URL agent-room.com, écouter, travailler par le board, sortir seulement sur « au revoir » de l'hôte | — | rien |
 
-Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`).
+Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`, `skills/chatroom/`).
 
 Hors marketplace, installés à la main depuis un clone : [`prismText`](prismText/) (réécriture de textes
 par prismes) et [`ctrlmajMDTerm`](ctrlmajMDTerm/) (liens `.md` ouverts dans mdterm sous herdr).
