@@ -2,12 +2,12 @@
 name: remia-tooling
 description: >
   Point dépôt vs local des plugins de la marketplace remia-tooling (remia, rename-herdr, usec,
-  simple, voxtunnel) : ce qui est installé, en retard, nouveau, encore installé à la main ;
+  simple, chatroom, markitdown, voxtunnel) : ce qui est installé, en retard, nouveau, encore installé à la main ;
   proposer installations et migrations, mémoriser les réponses, nettoyer après une désactivation.
   Déclenche sur toute mention de remia-tooling ou "remia", "mes tools", "mes outils du dépôt",
   "qu'est-ce qui est à jour", "installe <outil du dépôt>", "mets à jour mes outils", "migre cette
   machine", et sur un message [remia-tooling] injecté par un hook.
-version: 1.0.1
+version: 1.0.2
 ---
 
 # remia-tooling
@@ -68,7 +68,8 @@ s'installe par ce skill, à la demande, avec `sudo` : jamais automatiquement.
 ## 3. Migrer une installation à la main
 
 Avant les plugins, les outils s'installaient par `install.sh` depuis un clone : skills copiés dans
-`~/.claude/skills/`, hooks écrits dans `~/.claude/settings.json`, bloc usec dans `~/.claude/CLAUDE.md`.
+`~/.claude/skills/`, hooks écrits dans `~/.claude/settings.json`, blocs usec et markitdown dans
+`~/.claude/CLAUDE.md`.
 Le plugin apporte tout cela lui-même ; les restes feraient doublon (alertes en double, skill en double).
 
 ```bash
@@ -82,6 +83,11 @@ commandes d'installation avec les réglages d'avant (par exemple `--config targe
 mémoriser `oui`, et demander une nouvelle session. Les scripts déjà posés dans `~/.local` et l'unité
 systemd restent en place : le premier démarrage de session les réécrit à la version du plugin.
 
+`migrate` ne retire de `CLAUDE.md` que les blocs entre marqueurs (`<!-- usec:start`, `<!-- markitdown:start`).
+Une règle markitdown écrite à la main, sans marqueurs, reste en place : après la migration, la montrer à
+l'utilisateur et proposer de la supprimer (la règle vient du plugin, et son ancien chemin
+`~/.claude/skills/markitdown/` n'existe plus).
+
 ## 4. Vérifier après installation (nouvelle session)
 
 | Plugin | Contrôle |
@@ -89,6 +95,7 @@ systemd restent en place : le premier démarrage de session les réécrit à la 
 | rename-herdr | `cat ~/.config/remia-tooling/rename-herdr/installed-version` ; `systemctl --user is-active rename-herdr.path` ; un `/rename` fait suivre l'onglet |
 | usec | `cat ~/.config/remia-tooling/usec/installed-version` ; `usec-watch status` |
 | simple | `/simple:simple` apparaît dans la liste des skills |
+| markitdown | `cat ~/.config/remia-tooling/markitdown/installed-version` ; `to-md --version` ; le skill `markitdown:markitdown` apparaît dans la liste |
 | tous | `remia-tooling status` : tout « à jour », plus aucun « à la main » |
 
 Un message `[remia-tooling] <plugin> X : mise en place en échec` au démarrage donne la fin de la sortie
@@ -103,6 +110,7 @@ Avec accord, depuis le clone de la marketplace :
 ```bash
 "$(remia-tooling path)/rename_herdr/install.sh" --uninstall   # unité systemd, script, état
 "$(remia-tooling path)/usec/install.sh" --uninstall           # scripts, porte quota, état
+"$(remia-tooling path)/markitdown/install.sh" --uninstall     # environnement Python, to-md, état
 ```
 
 `simple` ne pose rien hors de `~/.config/remia-tooling/simple/` (profil et journal, à garder sauf demande).

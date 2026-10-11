@@ -32,6 +32,7 @@ Hors session : `~/.claude/plugins/marketplaces/remia-tooling/remia/bin/remia-too
 | simple | `~/.claude/skills/simple/` | profil et journal, reportés dans `~/.config/remia-tooling/simple/` |
 | rename-herdr | `~/.claude/skills/rename-herdr/`, hook de version de la 1.2.0 | script, unité systemd, réglage `target` (repris dans la commande d'installation) |
 | usec | hooks `usec-watch` de `~/.claude/settings.json`, bloc usec de `~/.claude/CLAUDE.md` | scripts, état, langue (reprise dans la commande d'installation) |
+| markitdown | `~/.claude/skills/markitdown/` (son environnement Python `.venv` est supprimé, pas sauvegardé : le plugin recrée le sien), bloc markitdown de `~/.claude/CLAUDE.md` | une règle écrite à la main hors marqueurs, à retirer soi-même |
 
 ## Fichiers
 
@@ -52,5 +53,6 @@ montées ensemble (`tests/check.sh` le vérifie).
 
 | Version | Changements |
 |---|---|
+| 1.0.2 | Plugin `markitdown` connu de `status` et de `migrate` : skill copié dans `~/.claude/skills/`, bloc `<!-- markitdown:start` de `CLAUDE.md`. |
 | 1.0.1 | Les commandes d'installation proposées donnent toujours les réglages (`--config target=…`, `--config lang=…`), y compris par défaut : sans cela Claude Code signale une option « not yet set ». |
 | 1.0.0 | Première version, en plugin de la marketplace. |

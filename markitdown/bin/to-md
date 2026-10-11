@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# to-md : convertit un document non-markdown en Markdown avec markitdown (Microsoft).
+#
+#   to-md <fichier> [sortie.md]   écrit le Markdown dans un fichier et en donne le chemin et la taille
+#                                 (sans sortie : <dossier temporaire>/<nom>.md) ; à lire ensuite, par
+#                                 tranches s'il est gros
+#   to-md --stdout <fichier>      écrit le Markdown sur la sortie standard (petits fichiers seulement)
+#   to-md --version               version de to-md et de markitdown
+#
+# markitdown vit dans un environnement Python à part, créé par install.sh :
+# ${XDG_DATA_HOME:-~/.local/share}/markitdown/venv, ou $MARKITDOWN_VENV.
+# Codes de sortie : 0 converti ; 1 fichier introuvable ou conversion en échec ; 2 mauvais usage ;
+# 3 environnement absent (lancer install.sh).
+set -euo pipefail
+VERSION="1.0.0"
+
+usage() { sed -n '2,9p' "$0" | sed 's/^# \{0,1\}//'; }
+
+VENV=${MARKITDOWN_VENV:-${XDG_DATA_HOME:-$HOME/.local/share}/markitdown/venv}
+PY="$VENV/bin/python"
+[ -x "$PY" ] || PY="$VENV/Scripts/python.exe"   # environnement créé sous Windows
+need_env() {
+  [ -x "$PY" ] && return 0
+  echo "to-md : environnement markitdown absent ($VENV). Lancer install.sh du dossier markitdown de remia-tooling." >&2
+  exit 3
+}
+
+STDOUT=0
+case "${1:-}" in
+  -h|--help) usage; exit 0 ;;
+  --version)
+    need_env
+    echo "to-md $VERSION, markitdown $("$PY" -c 'from importlib.metadata import version; print(version("markitdown"))' 2>/dev/null || echo "?")"
+    exit 0 ;;
+  --stdout) STDOUT=1; shift ;;
+  --) shift ;;
+  -*) echo "to-md : option inconnue : $1" >&2; usage >&2; exit 2 ;;
+esac
+[ $# -ge 1 ] && [ $# -le 2 ] || { usage >&2; exit 2; }
+[ "$STDOUT" = 1 ] && [ $# -ne 1 ] && { usage >&2; exit 2; }
+
+SRC=$1
+[ -f "$SRC" ] || { echo "to-md : fichier introuvable : $SRC" >&2; exit 1; }
+need_env
+
+if [ "$STDOUT" = 1 ]; then
+  exec "$PY" -m markitdown "$SRC"
+fi
+
+if [ $# -eq 2 ]; then
+  OUT=$2
+else
+  BASE=$(basename "$SRC")
+  OUT="${TMPDIR:-/tmp}/${BASE%.*}.md"
+fi
+[ "$OUT" -ef "$SRC" ] && { echo "to-md : la sortie écraserait la source : $OUT" >&2; exit 2; }
+
+# conversion dans un fichier provisoire : un échec ne laisse pas un .md vide ou tronqué derrière lui
+TMP="$OUT.tmp-to-md.$$"
+trap 'rm -f "$TMP"' EXIT
+if ! "$PY" -m markitdown "$SRC" > "$TMP"; then
+  echo "to-md : conversion en échec : $SRC" >&2
+  exit 1
+fi
+mv -f "$TMP" "$OUT"
+echo "converti : $OUT"
+echo "$(wc -l < "$OUT" | tr -d ' ') lignes, $(wc -w < "$OUT" | tr -d ' ') mots"

@@ -1,0 +1,7 @@
+{
+  "name": "markitdown",
+  "version": "1.0.0",
+  "description": "Skill markitdown : tout document non-markdown (PDF, Word, Excel, PowerPoint, Outlook, HTML, EPUB…) passe par un aiguillage ; s'il sert de source de contenu, il est converti en Markdown avant lecture.",
+  "author": { "name": "remmmi" },
+  "dependencies": ["remia"]
+}

@@ -31,6 +31,11 @@
       "description": "Skill chatroom : rejoindre un salon Agent Room focus et terse, écouter, travailler par le board, sortir seulement sur « au revoir » de l'hôte."
     },
     {
+      "name": "markitdown",
+      "source": "./markitdown",
+      "description": "Skill markitdown : tout document non-markdown passe par un aiguillage ; source de contenu, il est converti en Markdown avant lecture (PDF, Word, Excel, PowerPoint, Outlook, HTML, EPUB…)."
+    },
+    {
       "name": "voxtunnel",
       "source": {
         "source": "git-subdir",

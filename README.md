@@ -20,7 +20,12 @@ Ce README est la procédure de référence. Pour mettre une machine sur ce syst�
 | `voxtunnel` | skill d'installation et de diagnostic de [Voxtunnel](https://github.com/remmmi/voxtunnel) (le micro du poste vers un serveur, par SSH) | — | rien d'automatique : l'application s'installe par le skill, à la demande |
 | `chatroom` | skill de salon Agent Room : entrer focus et terse sur une URL agent-room.com, écouter, travailler par le board, sortir seulement sur « au revoir » de l'hôte | — | rien |
 
-Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`, `skills/chatroom/`).
+| `markitdown` | skill d'aiguillage des documents non-markdown (PDF, Word, Excel, PowerPoint…) : source de contenu, le document est converti en Markdown avant lecture ; règle en début de session, commande `to-md` | — | un environnement Python dans `~/.local/share/markitdown/` (350 Mo environ), `to-md` dans `~/.local/bin` |
+
+Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`, `skills/chatroom/`, `markitdown/`).
+
+`markitdown` s'installe aussi sans Claude Code, pour tout agent qui sait lancer un script et lire un
+fichier d'instructions : [`markitdown/INSTALL.md`](markitdown/INSTALL.md).
 
 Hors marketplace, installés à la main depuis un clone : [`prismText`](prismText/) (réécriture de textes
 par prismes) et [`ctrlmajMDTerm`](ctrlmajMDTerm/) (liens `.md` ouverts dans mdterm sous herdr).
@@ -75,8 +80,9 @@ $R migrate              # avec son accord
 ```
 
 `migrate` sauvegarde d'abord (`~/.config/remia-tooling/sauvegarde/<date>/`), puis retire les skills
-copiés dans `~/.claude/skills/` (`simple`, `rename-herdr`), les hooks `usec-watch` et le hook de version
-de rename_herdr dans `~/.claude/settings.json`, et le bloc usec de `~/.claude/CLAUDE.md`. Le profil et
+copiés dans `~/.claude/skills/` (`simple`, `rename-herdr`, `markitdown`), les hooks `usec-watch` et le hook
+de version de rename_herdr dans `~/.claude/settings.json`, et les blocs usec et markitdown de
+`~/.claude/CLAUDE.md`. Le profil et
 le journal de `simple` sont reportés dans `~/.config/remia-tooling/simple/`. Les scripts de `~/.local`
 et l'unité systemd restent en place. La commande finit par afficher les installations à lancer, avec
 les réglages qu'avait la machine.
@@ -90,6 +96,7 @@ claude plugin install rename-herdr@remia-tooling --config target=tab    # ou pan
 claude plugin install usec@remia-tooling --config lang=fr               # ou en
 claude plugin install simple@remia-tooling
 claude plugin install voxtunnel@remia-tooling
+claude plugin install markitdown@remia-tooling
 $R decide <plugin> oui     # pour chaque plugin installé ; « non » pour un plugin refusé : il ne sera plus proposé
 ```
 
@@ -138,13 +145,13 @@ Claude Code, au démarrage d'une session interactive (mise à jour automatique a
 ~/.claude/plugins/cache/remia-tooling/<plugin>/<version>/      une copie par version
    │  la session suivante charge cette copie : skills, hooks, réglages
    ▼
-hook SessionStart du plugin (rename-herdr, usec)  →  hooks/plugin-setup.sh
+hook SessionStart du plugin (rename-herdr, usec, markitdown)  →  hooks/plugin-setup.sh
    │  compare « version + réglages » au témoin ~/.config/remia-tooling/<plugin>/installed-version
    │    identique : ne fait rien (une lecture de fichier)
    │    différent : lance l'install.sh de l'outil, écrit le témoin, le dit en une ligne
    │    échec     : le dit avec la raison, réessaie à la session suivante ; ne bloque jamais la session
    ▼
-la machine : ~/.local/bin, unité systemd utilisateur
+la machine : ~/.local/bin, ~/.local/share, unité systemd utilisateur
 ```
 
 Trois conséquences à connaître :
@@ -161,7 +168,8 @@ Trois conséquences à connaître :
 - **Activer un plugin vaut accord pour sa mise en place.** Elle n'écrit que dans `~/.local`,
   `~/.config/systemd/user` et `~/.config/remia-tooling`, sans `sudo`. Exception : `voxtunnel`, dont
   l'application demande `sudo` et un module noyau ; son plugin n'installe rien, son skill le fait à la
-  demande.
+  demande. La première mise en place de `markitdown` télécharge ses dépendances Python depuis PyPI :
+  le démarrage de cette session-là attend une à deux minutes, les suivants rien.
 
 Le plugin `remia` n'installe et ne met à jour rien. Il lit le clone de la marketplace et
 `~/.claude/plugins/installed_plugins.json`, et parle par deux hooks : au démarrage (plugin jamais
@@ -181,6 +189,7 @@ remia-tooling (au plus une fois par heure et par session). Il se tait quand il n
 | `~/.config/remia-tooling/sauvegarde/<date>/` | ce que `migrate` a retiré | `remia-tooling migrate` |
 | `~/.local/bin/herdr-session-name-sync`, `~/.config/systemd/user/rename-herdr.*` | rename_herdr | son `install.sh` |
 | `~/.local/bin/usec`, `usec-watch`, `~/.local/share/usec/`, `~/.local/state/usec/` | usec et son historique | son `install.sh`, `usec-watch` |
+| `~/.local/share/markitdown/venv/`, `~/.local/bin/to-md` | markitdown : environnement Python à part et commande de conversion | son `install.sh` |
 
 ## Retirer un outil
 
@@ -190,9 +199,10 @@ en place a posé. Pour nettoyer, plugin désactivé :
 ```bash
 "$(remia-tooling path)/rename_herdr/install.sh" --uninstall   # unité systemd, script, état
 "$(remia-tooling path)/usec/install.sh" --uninstall           # scripts, porte quota, état
+"$(remia-tooling path)/markitdown/install.sh" --uninstall     # environnement Python, to-md, état
 ```
 
-Tout retirer d'une machine : `claude plugin uninstall <plugin>@remia-tooling` pour chacun, les deux
+Tout retirer d'une machine : `claude plugin uninstall <plugin>@remia-tooling` pour chacun, les
 commandes ci-dessus, `claude plugin marketplace remove remia-tooling`, puis `rm -rf ~/.config/remia-tooling`.
 
 ## Dépannage
@@ -211,11 +221,11 @@ commandes ci-dessus, `claude plugin marketplace remove remia-tooling`, puis `rm 
 ## Faire évoluer le dépôt
 
 ```
-.claude-plugin/marketplace.json   la marketplace : 4 plugins en chemins relatifs, voxtunnel en source externe
+.claude-plugin/marketplace.json   la marketplace : les plugins en chemins relatifs, voxtunnel en source externe
 bootstrap.sh                      mise d'une machine sur la marketplace
-lib/plugin-setup.sh               hook de mise en place commun ; copié dans rename_herdr/hooks/ et usec/hooks/
+lib/plugin-setup.sh               hook de mise en place commun ; copié dans rename_herdr/hooks/, usec/hooks/ et markitdown/hooks/
 tests/check.sh                    contrôle avant de pousser
-remia/  rename_herdr/  usec/  skills/simple/     un dossier par plugin (.claude-plugin/plugin.json, hooks/, skills/)
+remia/  rename_herdr/  usec/  markitdown/  skills/simple/  skills/chatroom/     un dossier par plugin (.claude-plugin/plugin.json, hooks/, skills/)
 docs/superpowers/specs/           la conception de ce système
 ```
 
@@ -224,8 +234,8 @@ Publier une modification d'un outil :
 1. modifier, puis **monter la version** partout où l'outil la porte (`plugin.json`, le script, le
    `SKILL.md`) et ajouter la ligne au tableau « Versions » de son README. Sans montée de version, aucune
    machine ne reçoit la modification ;
-2. `lib/plugin-setup.sh` modifié : le recopier dans `rename_herdr/hooks/` et `usec/hooks/`, et monter la
-   version de ces deux plugins ;
+2. `lib/plugin-setup.sh` modifié : le recopier dans `rename_herdr/hooks/`, `usec/hooks/` et
+   `markitdown/hooks/`, et monter la version de ces trois plugins ;
 3. `tests/check.sh` : versions cohérentes, copies identiques, manifestes valides
    (`claude plugin validate`), autotests, rien de personnel dans les fichiers distribués. Attendu : `0 KO` ;
 4. pousser sur `main`. Les machines suivent à leurs deux prochains démarrages de session.

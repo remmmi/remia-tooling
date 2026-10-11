@@ -21,10 +21,12 @@ same "rename-herdr : plugin.json = herdr-session-name-sync" "$(manifest rename_h
 same "rename-herdr : plugin.json = SKILL.md"              "$(manifest rename_herdr)" "$(front rename_herdr/skills/rename-herdr/SKILL.md)"
 same "usec : plugin.json = USEC_VERSION"                  "$(manifest usec)" "$(sed -n 's/^USEC_VERSION=//p' usec/usec)"
 same "simple : plugin.json = SKILL.md"                    "$(manifest skills/simple)" "$(front skills/simple/SKILL.md)"
+same "markitdown : plugin.json = bin/to-md"                "$(manifest markitdown)" "$(sed -n 's/^VERSION="\(.*\)"$/\1/p' markitdown/bin/to-md)"
+same "markitdown : plugin.json = SKILL.md"                "$(manifest markitdown)" "$(front markitdown/skills/markitdown/SKILL.md)"
 same "chatroom : plugin.json = SKILL.md"                  "$(manifest skills/chatroom)" "$(front skills/chatroom/SKILL.md)"
 
 # ── chaque version figure dans le tableau « Versions » du README de l'outil
-for d in remia rename_herdr usec skills/simple skills/chatroom; do
+for d in remia rename_herdr usec skills/simple skills/chatroom markitdown; do
   v=$(manifest "$d")
   grep -q "^| $v |" "$d/README.md" && good "$d/README.md : ligne $v dans Versions" || bad "$d/README.md : pas de ligne $v dans Versions"
 done
@@ -50,13 +52,13 @@ sys.exit(rc)
 PY
 
 # ── copies du hook de mise en place
-for d in rename_herdr usec; do
+for d in rename_herdr usec markitdown; do
   cmp -s lib/plugin-setup.sh "$d/hooks/plugin-setup.sh" && good "$d/hooks/plugin-setup.sh identique à lib/" \
     || bad "$d/hooks/plugin-setup.sh diffère de lib/plugin-setup.sh (cp lib/plugin-setup.sh $d/hooks/)"
 done
 
 # ── hooks.json lisibles, scripts appelés présents et exécutables
-for f in remia/hooks/hooks.json rename_herdr/hooks/hooks.json usec/hooks/hooks.json; do
+for f in remia/hooks/hooks.json rename_herdr/hooks/hooks.json usec/hooks/hooks.json markitdown/hooks/hooks.json; do
   python3 - "$f" <<'PY' && good "$f : JSON valide, scripts présents" || bad "$f : invalide ou script manquant"
 import json, os, re, sys
 path = sys.argv[1]; root = os.path.dirname(os.path.dirname(path))
@@ -73,7 +75,7 @@ done
 
 # ── rien de personnel dans ce qui est distribué (chemin absolu d'un compte, nom de machine ou de projet)
 perso=$(grep -rnIP '(?<![\w$}])/home/[a-z0-9_-]+/|kilorem|kilometrack' --exclude-dir=.git \
-          .claude-plugin remia rename_herdr usec skills lib bootstrap.sh README.md 2>/dev/null || true)
+          .claude-plugin remia rename_herdr usec skills markitdown lib bootstrap.sh README.md 2>/dev/null || true)
 if [ -n "$perso" ]; then
   bad "chemin ou nom personnel dans les fichiers distribués :"; sed 's/^/    /' <<<"$perso"
 else
@@ -82,13 +84,13 @@ fi
 
 if [ "$QUICK" = 0 ]; then
   if command -v claude >/dev/null; then
-    for d in . remia rename_herdr usec skills/simple; do
+    for d in . remia rename_herdr usec skills/simple markitdown; do
       claude plugin validate "$d" >/dev/null 2>&1 && good "claude plugin validate $d" || bad "claude plugin validate $d"
     done
   else
     echo "--  claude introuvable : validation des manifestes sautée"
   fi
-  for t in tests/plugin-setup-test.sh remia/selftest.sh usec/selftest.sh; do
+  for t in tests/plugin-setup-test.sh remia/selftest.sh usec/selftest.sh markitdown/selftest.sh; do
     out=$("$t" 2>&1) && good "$t : $(tail -n 1 <<<"$out")" || { bad "$t : $(tail -n 1 <<<"$out")"; grep '^KO' <<<"$out" | sed 's/^/    /'; }
   done
 fi
