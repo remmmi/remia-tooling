@@ -6,7 +6,7 @@ description: >
   autre agent ou d'un LLM. Déclenche sur /decode:decode, et sur "traduis-moi ça",
   "décode", "je comprends pas ce qu'il veut", "qu'est-ce qu'il dit", "explique-moi sa
   réponse point par point". Ne résume JAMAIS : chaque paragraphe est rendu.
-version: 1.1.0
+version: 1.2.0
 ---
 
 ## Profil de l'utilisateur
@@ -42,10 +42,25 @@ les noms réels (fichier, fonction, numéro d'issue).
 - **dans le code**, seulement quand ça éclaire l'enjeu : `fichier:ligne` vérifié par `grep -n`,
   l'extrait de 1 à 3 lignes qui porte le point, et ce qu'il fait concrètement (un exemple de
   valeur qui entre, ce qui sort) ;
+- **un principe, un cas réel** : toute affirmation abstraite (sécurité, architecture, « qui appelle
+  quoi », « d'où viennent les valeurs ») reçoit un exemple tiré du projet de l'utilisateur, avec de
+  vraies valeurs (« quand tu ouvres un mail, le plugin reçoit `uid=128` du navigateur ; quelqu'un
+  peut envoyer `uid=128 EVIL` »). Un principe sans cas est la première cause de décrochage mesurée,
+  bien avant le vocabulaire ;
+- **un jugement, son critère** : quand l'auteur classe quelque chose (faille ou angle coupant, bug ou
+  choix, grave ou bénin, « not sacred »), rendre **pourquoi** il le classe ainsi, pas seulement
+  l'étiquette (« pas une faille, parce qu'aujourd'hui rien ne lui passe autre chose que des nombres
+  venus du serveur ; un angle coupant, parce que ça deviendrait une faille dès qu'un plugin lui passe
+  une valeur du navigateur ») ;
 - **pour nous**, si le paragraphe change quelque chose pour l'utilisateur ou son projet.
 
 Une liste à puces de l'auteur se décode puce par puce. Un bloc de code de l'auteur se lit ligne
 par ligne.
+
+**Vérifier ce qui est annoncé comme fait.** « Fixed on master », « I added a test », « already
+merged » : aller lire le vrai commit ou le vrai fichier sur la forge (API publique, `raw.`), pas une
+copie locale d'une autre version. Citer le hash court, la date, et ce que le commit contient de plus
+que l'annonce (un détail du correctif, un fichier de test inattendu). Introuvable : le dire.
 
 **4. Garder le ton.** Un compliment, un refus poli, une réserve, une concession, une question
 qui attend une réponse précise : chacun est nommé pour ce qu'il est (« c'est un refus, adouci
@@ -53,6 +68,12 @@ par… »). Séparer toujours « il dit » de « j'en déduis » ; aucune intent
 
 **5. Finir par « ce qu'il attend de toi »** : questions à répondre, décisions à prendre, gestes
 promis de part et d'autre. Si une réponse existe déjà (brouillon), la nommer par son chemin.
+
+**6. « Qui a écrit », en 3 à 5 lignes, à la fin.** Indices observables seulement : écart d'horodatage
+entre un commit et le message (secondes = agent), formules reprises mot pour mot d'un texte à
+l'autre, structure et tournures typiques d'un LLM, phrase qui détonne (souvent la part humaine). Une
+estimation en pourcentage, donnée comme estimation. Conséquence pratique : si un agent lit, répondre
+en anglais simple, précis, point par point.
 
 ## Forme
 
@@ -75,7 +96,7 @@ promis de part et d'autre. Si une réponse existe déjà (brouillon), la nommer 
 
 ## Vérification avant d'envoyer
 
-1. Chaque paragraphe de la source a sa section (compter) ?
+1. Chaque paragraphe de la source a sa section (compter) ? Chaque principe abstrait a son cas réel, chaque jugement son critère ?
 2. Chaque idiome ou mot de métier est-il défini à son premier usage, dans la phrase même ?
 3. Chaque `fichier:ligne` cité a-t-il été vérifié par `grep -n` dans cette session ?
 4. Rien de résumé ; tout ajout que l'auteur n'a pas écrit est entre `⟦ ⟧` (et « j'en déduis » s'il s'agit d'une intention) ?

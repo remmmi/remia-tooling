@@ -46,6 +46,7 @@ Plugin `decode` de la marketplace `remia-tooling` : `/plugin` dans Claude Code, 
 
 | Version | Changements |
 |---|---|
+| 1.2.0 | Un principe = un cas réel du projet ; un jugement de l'auteur = son critère (pourquoi « sharp edge » et pas « hole ») ; ce qui est annoncé comme fait est vérifié sur la forge (commit réel) ; section finale « qui a écrit » (indices d'IA, estimation). |
 | 1.1.0 | Les explications ajoutées sont entre `⟦ ⟧` ; `decode.nanorc` les colore en vert clair dans nano (et porte les réglages de confort). |
 | 1.0.0 | Première version. |
 
