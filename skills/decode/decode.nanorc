@@ -1,0 +1,27 @@
+# Couleurs de nano pour les fichiers de /decode:decode (*-traduit.md) : ce qui est entre ⟦ ⟧ est
+# l'explication ajoutée (vert clair), le reste est la traduction. Usage : nano --rcfile decode.nanorc <fichier>
+# Les règles markdown reprennent /usr/share/nano/markdown.nanorc (titres = phrase source, en jaune) ;
+# le vert vient en dernier pour l'emporter.
+set softwrap
+set atblanks
+set mouse
+set indicator
+set smarthome
+set zap
+set minibar
+set stateflags
+
+syntax decode "-traduit\.md$"
+color magenta "^[ 	]*>.*"
+color brightmagenta "^(    |	)* ? ? ?(\*|\+|-|[0-9]+\.)( +|	)"
+color green "\*[^* 	][^*]*\*|_[^_ 	][^_]*_"
+color brightgreen "\*\*[^*]+\*\*|__[^_]+__"
+color brightblue "\[[^]]+\]\([^)]+\)"
+color brightcyan "`[^`]+`"
+color brightcyan "^(    |	)+ *([^*+0-9> 	-]|[*+-]\S|[0-9][^.]).*"
+color brightcyan start="```" end="```$"
+color brightyellow "^#.*"
+color brightyellow "^(=+|-+)$"
+color lightgreen start="⟦" end="⟧"
+# les marques elles-mêmes, en gris discret (nano ne sait pas masquer un caractère)
+color slate "⟦|⟧"

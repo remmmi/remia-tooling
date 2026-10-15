@@ -58,11 +58,12 @@ for idiome in "papers over" "sharp edge" "critical section" "cold start"; do
     # hors titres : le titre cite la phrase source, la définition vient dans le corps
     corps=$(printf '%s\n' "$REPONSE" | grep -vE '^#{2,3} ')
     if ! printf '%s' "$REPONSE" | grep -qi "$idiome"; then kofn "idiome absent : $idiome"
-    elif printf '%s' "$corps" | grep -qiE "$idiome[^.]{0,40}(\(|=| — | - |:|, c'est|, soit|veut dire)"; then ok "idiome défini : $idiome"
+    elif printf '%s' "$corps" | grep -qiE "$idiome[^.]{0,40}(\(|⟦|=| — | - |:|, c'est|, soit|veut dire)"; then ok "idiome défini : $idiome"
     else kofn "idiome cité sans définition : $idiome"; fi
 done
 
 [ "$(mots "$REPONSE")" -ge "$(mots "$SOURCE")" ] && ok "pas résumé ($(mots "$REPONSE") mots ≥ $(mots "$SOURCE"))" || kofn "plus court que la source : résumé"
+printf '%s' "$REPONSE" | grep -q "⟦" && printf '%s' "$REPONSE" | grep -q "⟧" && ok "explications marquées ⟦ ⟧" || kofn "aucune explication marquée ⟦ ⟧"
 printf '%s' "$REPONSE" | grep -qi "attend" && ok "fin « ce qu'il attend »" || kofn "pas de « ce qu'il attend »"
 printf '%s' "$REPONSE" | grep -qiE "production|benchmark" && ok "sa question finale est rendue" || kofn "sa question finale (production / benchmark) est perdue"
 

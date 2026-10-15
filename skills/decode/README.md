@@ -31,6 +31,7 @@ Plugin `decode` de la marketplace `remia-tooling` : `/plugin` dans Claude Code, 
 |---|---|
 | `.claude-plugin/plugin.json` | le plugin (nom, version) |
 | `SKILL.md` | le skill |
+| `decode.nanorc` | couleurs et confort de nano pour les `*-traduit.md` : explication ajoutée en vert clair |
 | `selftest.sh` | autotest : soumet un court texte de mainteneur à `claude -p` et vérifie qu'aucun paragraphe n'est sauté et que les idiomes sont définis |
 
 ## Ce que le skill apprend (toujours avec accord)
@@ -45,6 +46,7 @@ Plugin `decode` de la marketplace `remia-tooling` : `/plugin` dans Claude Code, 
 
 | Version | Changements |
 |---|---|
+| 1.1.0 | Les explications ajoutées sont entre `⟦ ⟧` ; `decode.nanorc` les colore en vert clair dans nano (et porte les réglages de confort). |
 | 1.0.0 | Première version. |
 
 ## Tester

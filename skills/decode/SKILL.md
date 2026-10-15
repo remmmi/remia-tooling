@@ -6,7 +6,7 @@ description: >
   autre agent ou d'un LLM. Déclenche sur /decode:decode, et sur "traduis-moi ça",
   "décode", "je comprends pas ce qu'il veut", "qu'est-ce qu'il dit", "explique-moi sa
   réponse point par point". Ne résume JAMAIS : chaque paragraphe est rendu.
-version: 1.0.0
+version: 1.1.0
 ---
 
 ## Profil de l'utilisateur
@@ -60,8 +60,16 @@ promis de part et d'autre. Si une réponse existe déjà (brouillon), la nommer 
   sinon dans le dossier de docs du projet ; pas dans le chat : il se relit à côté du texte d'origine.
 - **Un paragraphe par ligne** (aucun retour à la ligne dur au milieu d'une phrase) ; titres `##` par
   paragraphe source, numérotés dans l'ordre.
-- Le proposer ouvert dans un éditeur confortable s'il y a un terminal à côté, par exemple
-  `nano --softwrap --atblanks --mouse --indicator --smarthome --zap --minibar --stateflags <fichier>`.
+- **Deux voix, séparées à l'œil.** La traduction (« ce qu'il dit », son ton) est en texte normal.
+  Tout ce que j'**ajoute** et qu'il n'a pas écrit est entre `⟦` et `⟧` : définition d'un raccourci,
+  contexte, passage du code, « pour nous », « j'en déduis ». Le marqueur ouvre et ferme dans le même
+  paragraphe ; un paragraphe entier d'explication est entièrement entre `⟦ ⟧`. Les citations de la
+  source restent hors marqueurs. Test : en retirant tout le `⟦…⟧`, il reste une traduction fidèle
+  et lisible.
+- L'ouvrir s'il y a un terminal à côté, avec le `decode.nanorc` posé à côté de ce `SKILL.md` (dossier
+  de base du skill) : `nano --rcfile <dossier du skill>/decode.nanorc <fichier>`. Il colore le
+  `⟦…⟧` en vert clair, garde les titres (phrase source) en jaune comme le markdown de nano, et règle le confort (retour à la ligne entre les mots, souris, barre de
+  position). Le fichier doit finir par `-traduit.md`.
 - Dans le chat : une ligne de verdict (où est le fichier), puis les 1 ou 2 points où le détour par
   le code change la compréhension. Rien d'autre.
 
@@ -70,7 +78,7 @@ promis de part et d'autre. Si une réponse existe déjà (brouillon), la nommer 
 1. Chaque paragraphe de la source a sa section (compter) ?
 2. Chaque idiome ou mot de métier est-il défini à son premier usage, dans la phrase même ?
 3. Chaque `fichier:ligne` cité a-t-il été vérifié par `grep -n` dans cette session ?
-4. Rien de résumé, rien d'ajouté que l'auteur n'a pas dit sans la marque « j'en déduis » ?
+4. Rien de résumé ; tout ajout que l'auteur n'a pas écrit est entre `⟦ ⟧` (et « j'en déduis » s'il s'agit d'une intention) ?
 
 ## Après chaque /decode : apprendre (toujours avec accord)
 
