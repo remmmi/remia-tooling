@@ -1,6 +1,6 @@
 {
   "name": "simple",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "Skill /simple:simple : rejouer une explication que l'utilisateur n'a pas comprise, en changeant de registre au lieu d'ajouter des détails.",
   "author": { "name": "remmmi" },
   "dependencies": ["remia"]

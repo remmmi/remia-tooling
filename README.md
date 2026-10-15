@@ -17,12 +17,13 @@ Ce README est la procédure de référence. Pour mettre une machine sur ce syst�
 | `rename-herdr` | l'onglet herdr (ou le pane) suit le `/rename` de la session | `target` : `tab`, `pane`, `both` | un script dans `~/.local/bin`, une unité systemd utilisateur |
 | `usec` | quotas de l'abonnement : surveillance silencieuse, alerte seulement si critique, commande `usec` | `lang` : `fr`, `en` | `usec`, `usec-watch`, `quota_gate.sh` dans `~/.local` |
 | `simple` | skill `/simple:simple` : rejouer une explication ratée dans un registre concret | — | rien (profil dans `~/.config/remia-tooling/simple/`) |
+| `decode` | skill `/decode:decode` : comprendre le texte d'un autre (mainteneur, issue, doc, LLM) paragraphe par paragraphe, sans résumer, code à l'appui | — | rien (glossaire dans `~/.config/remia-tooling/decode/`) |
 | `voxtunnel` | skill d'installation et de diagnostic de [Voxtunnel](https://github.com/remmmi/voxtunnel) (le micro du poste vers un serveur, par SSH) | — | rien d'automatique : l'application s'installe par le skill, à la demande |
 | `chatroom` | skill de salon Agent Room : entrer focus et terse sur une URL agent-room.com, écouter, travailler par le board, sortir seulement sur « au revoir » de l'hôte | — | rien |
 
 | `markitdown` | skill d'aiguillage des documents non-markdown (PDF, Word, Excel, PowerPoint…) : source de contenu, le document est converti en Markdown avant lecture ; règle en début de session, commande `to-md` | — | un environnement Python dans `~/.local/share/markitdown/` (350 Mo environ), `to-md` dans `~/.local/bin` |
 
-Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`, `skills/chatroom/`, `markitdown/`).
+Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`, `skills/decode/`, `skills/chatroom/`, `markitdown/`).
 
 `markitdown` s'installe aussi sans Claude Code, pour tout agent qui sait lancer un script et lire un
 fichier d'instructions : [`markitdown/INSTALL.md`](markitdown/INSTALL.md).
@@ -95,6 +96,7 @@ Ceux qu'affiche `migrate`, ou au choix :
 claude plugin install rename-herdr@remia-tooling --config target=tab    # ou pane, ou both
 claude plugin install usec@remia-tooling --config lang=fr               # ou en
 claude plugin install simple@remia-tooling
+claude plugin install decode@remia-tooling
 claude plugin install voxtunnel@remia-tooling
 claude plugin install markitdown@remia-tooling
 $R decide <plugin> oui     # pour chaque plugin installé ; « non » pour un plugin refusé : il ne sera plus proposé
@@ -185,7 +187,8 @@ remia-tooling (au plus une fois par heure et par session). Il se tait quand il n
 | `~/.claude/settings.json` | `extraKnownMarketplaces` (marketplace, `autoUpdate`), `enabledPlugins`, `pluginConfigs` (réglages) | Claude Code, `bootstrap.sh` pour `autoUpdate` |
 | `~/.config/remia-tooling/<plugin>/installed-version` | témoin de mise en place : version et réglages | `plugin-setup.sh` |
 | `~/.config/remia-tooling/decisions.json` | oui/non mémorisés | `remia-tooling decide` |
-| `~/.config/remia-tooling/simple/` | profil et journal du skill `simple` | le skill, avec accord |
+| `~/.config/remia-tooling/simple/` | profil et journal du skill `simple` (profil lu aussi par `decode`) | le skill, avec accord |
+| `~/.config/remia-tooling/decode/` | glossaire du skill `decode` | le skill, avec accord |
 | `~/.config/remia-tooling/sauvegarde/<date>/` | ce que `migrate` a retiré | `remia-tooling migrate` |
 | `~/.local/bin/herdr-session-name-sync`, `~/.config/systemd/user/rename-herdr.*` | rename_herdr | son `install.sh` |
 | `~/.local/bin/usec`, `usec-watch`, `~/.local/share/usec/`, `~/.local/state/usec/` | usec et son historique | son `install.sh`, `usec-watch` |
@@ -225,7 +228,7 @@ commandes ci-dessus, `claude plugin marketplace remove remia-tooling`, puis `rm 
 bootstrap.sh                      mise d'une machine sur la marketplace
 lib/plugin-setup.sh               hook de mise en place commun ; copié dans rename_herdr/hooks/, usec/hooks/ et markitdown/hooks/
 tests/check.sh                    contrôle avant de pousser
-remia/  rename_herdr/  usec/  markitdown/  skills/simple/  skills/chatroom/     un dossier par plugin (.claude-plugin/plugin.json, hooks/, skills/)
+remia/  rename_herdr/  usec/  markitdown/  skills/simple/  skills/decode/  skills/chatroom/     un dossier par plugin (.claude-plugin/plugin.json, hooks/, skills/)
 docs/superpowers/specs/           la conception de ce système
 ```
 

@@ -49,6 +49,7 @@ comportement visible.
 
 | Version | Changements |
 |---|---|
+| 1.1.2 | Renvoi vers `decode` quand le texte à comprendre est celui d'un autre. |
 | 1.1.1 | La commande est `/simple:simple` (un skill de plugin porte le nom du plugin en préfixe) : description et docs corrigées. |
 | 1.1.0 | Plugin de la marketplace `remia-tooling`. Le profil et le journal sortent du `SKILL.md` : `~/.config/remia-tooling/simple/` (`remia-tooling migrate simple` reprend ceux d'une installation à la main). Version anglaise retirée. |
 | 1.0.0 | Première version numérotée. |

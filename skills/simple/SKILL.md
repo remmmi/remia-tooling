@@ -6,7 +6,7 @@ description: >
   d'incompréhension : "je comprends pas", "j'ai rien compris", "c'est quoi X",
   "réexplique", "de quoi tu parles", "et donc ?", "en clair", "tu parles de quoi",
   "je te suis pas", "redis-moi". N'ajoute JAMAIS de détail : change de registre.
-version: 1.1.1
+version: 1.1.2
 ---
 
 ## Profil de l'utilisateur
@@ -25,6 +25,9 @@ stack → d'où tirer le « cas réel nommé » ; couches → le vocabulaire de 
 L'utilisateur n'a pas compris le message précédent. La faute est du côté de l'explication,
 pas de sa lecture. La réponse par défaut — répéter en plus détaillé, en plus rigoureux,
 en plus long — **aggrave le problème**.
+
+> Le texte à comprendre est celui **d'un autre** (mainteneur, issue, doc, autre agent), pas le mien ?
+> Ce n'est pas ce skill : c'est `decode` (`/decode:decode`), qui rend tout, paragraphe par paragraphe.
 
 ## La règle unique
 
