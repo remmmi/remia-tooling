@@ -64,7 +64,9 @@ La conversion est locale : le document ne quitte pas la machine.
 | `bin/to-md` | la commande ; dans le `PATH` des sessions Claude par le plugin, copiée dans `~/.local/bin` pour le reste |
 | `install.sh` | environnement Python et `to-md` ; options `--skill-dir`, `--agents-md`, `--check`, `--uninstall` |
 | `INSTALL.md` | procédure pour l'agent qui installe hors plugin |
-| `hooks/` | `SessionStart` : mise en place (`setup.sh`, par `plugin-setup.sh`) et règle en contexte (`rule.sh`) |
+| `hooks/hooks.json` | branche le hook `SessionStart` : mise en place puis règle |
+| `hooks/setup.sh`, `hooks/plugin-setup.sh` | mise en place (copie de `lib/plugin-setup.sh`), qui appelle `install.sh` |
+| `hooks/rule.sh` | injecte `rule.md` en contexte de session |
 | `selftest.sh` | autotest dans un HOME jetable ; `--full` fait une vraie installation et de vraies conversions |
 
 ## Versions

@@ -20,7 +20,6 @@ Ce README est la procédure de référence. Pour mettre une machine sur ce syst�
 | `decode` | skill `/decode:decode` : comprendre le texte d'un autre (mainteneur, issue, doc, LLM) paragraphe par paragraphe, sans résumer, code à l'appui | — | rien (glossaire dans `~/.config/remia-tooling/decode/`) |
 | `voxtunnel` | skill d'installation et de diagnostic de [Voxtunnel](https://github.com/remmmi/voxtunnel) (le micro du poste vers un serveur, par SSH) | — | rien d'automatique : l'application s'installe par le skill, à la demande |
 | `chatroom` | skill de salon Agent Room : entrer focus et terse sur une URL agent-room.com, écouter, travailler par le board, sortir seulement sur « au revoir » de l'hôte | — | rien |
-
 | `markitdown` | skill d'aiguillage des documents non-markdown (PDF, Word, Excel, PowerPoint…) : source de contenu, le document est converti en Markdown avant lecture ; règle en début de session, commande `to-md` | — | un environnement Python dans `~/.local/share/markitdown/` (350 Mo environ), `to-md` dans `~/.local/bin` |
 
 Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`, `skills/decode/`, `skills/chatroom/`, `markitdown/`).
@@ -97,6 +96,7 @@ claude plugin install rename-herdr@remia-tooling --config target=tab    # ou pan
 claude plugin install usec@remia-tooling --config lang=fr               # ou en
 claude plugin install simple@remia-tooling
 claude plugin install decode@remia-tooling
+claude plugin install chatroom@remia-tooling
 claude plugin install voxtunnel@remia-tooling
 claude plugin install markitdown@remia-tooling
 $R decide <plugin> oui     # pour chaque plugin installé ; « non » pour un plugin refusé : il ne sera plus proposé
@@ -117,8 +117,8 @@ systemctl --user is-active rename-herdr.path                 # active
 usec --version && usec-watch status                          # version du plugin, dernier relevé
 ```
 
-Puis `/rename essai` dans une session ouverte sous herdr : l'onglet suit. `/simple:simple` figure dans
-la liste des skills.
+Puis `/rename essai` dans une session ouverte sous herdr : l'onglet suit. Les skills installés
+(`/simple:simple`, `/decode:decode`, `chatroom`, `markitdown`) figurent dans la liste des skills.
 
 ## Au quotidien
 
@@ -156,7 +156,7 @@ hook SessionStart du plugin (rename-herdr, usec, markitdown)  →  hooks/plugin-
 la machine : ~/.local/bin, ~/.local/share, unité systemd utilisateur
 ```
 
-Trois conséquences à connaître :
+Ce qu'il faut en retenir :
 
 - **La version de `plugin.json` commande tout.** Claude Code ne met un plugin à jour que si elle a
   monté ; l'outil n'est remis en place que si elle diffère du témoin.
@@ -228,7 +228,11 @@ commandes ci-dessus, `claude plugin marketplace remove remia-tooling`, puis `rm 
 bootstrap.sh                      mise d'une machine sur la marketplace
 lib/plugin-setup.sh               hook de mise en place commun ; copié dans rename_herdr/hooks/, usec/hooks/ et markitdown/hooks/
 tests/check.sh                    contrôle avant de pousser
-remia/  rename_herdr/  usec/  markitdown/  skills/simple/  skills/decode/  skills/chatroom/     un dossier par plugin (.claude-plugin/plugin.json, hooks/, skills/)
+tests/plugin-setup-test.sh        autotest de lib/plugin-setup.sh (HOME jetable, faux plugin)
+remia/  rename_herdr/  usec/  markitdown/                     un dossier par plugin (.claude-plugin/plugin.json, hooks/, skills/)
+skills/simple/  skills/decode/  skills/chatroom/              les plugins qui ne sont qu'un skill ; skills/README.md les liste
+prismText/  ctrlmajMDTerm/  claudeBridge/                     hors marketplace, installés à la main (chacun son README)
+.github/workflows/prismtext.yml   tests de prismText sous Node 18, 20 et 22 à chaque push qui le touche
 docs/superpowers/specs/           la conception de ce système
 ```
 

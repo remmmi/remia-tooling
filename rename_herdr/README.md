@@ -86,7 +86,9 @@ ou option, majeure = changement de comportement visible. `./install.sh --check` 
 |---|---|
 | `herdr-session-name-sync` | le script (python3, sans dépendance) |
 | `units/rename-herdr.path`, `units/rename-herdr.service` | déclencheur et service systemd utilisateur |
-| `.claude-plugin/plugin.json`, `hooks/` | le plugin : version, réglage `target`, hook de démarrage qui lance `install.sh` (`hooks/plugin-setup.sh` est une copie de `lib/plugin-setup.sh`) |
+| `.claude-plugin/plugin.json` | le plugin : version, réglage `target` |
+| `hooks/hooks.json`, `hooks/setup.sh` | hook `SessionStart` : lance la mise en place par `hooks/plugin-setup.sh` (copie de `lib/plugin-setup.sh`), qui appelle `install.sh` |
+| `.gitignore` | écarte le `__pycache__/` du script |
 | `install.sh`, `selftest.sh` | installation idempotente, vérification sans fausse session |
 | `INSTALL.md` | procédure pour l'agent qui installe à la main, sans plugin (Linux) |
 | `TECHNIQUE.md` | la technique sans OS : de quoi reconstruire sur macOS, Windows, ou sans systemd |

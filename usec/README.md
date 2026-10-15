@@ -19,10 +19,15 @@ $ usec
 | `usec-watch` | surveillance silencieuse par hook Claude Code : relevé en arrière-plan, projection, alerte seulement si critique ; `status` = dernier relevé sans appel |
 | `quota_gate.sh` | porte quota à sourcer dans un script qui enchaîne des `claude -p` : pause propre au seuil |
 | `claude-md.fr.md`, `claude-md.en.md` | la règle (quand lire `usec`, quels seuils) : injectée en début de session par le plugin, ou posée dans CLAUDE.md sans plugin |
-| `.claude-plugin/plugin.json`, `hooks/` | le plugin : version, réglage `lang`, hooks (mise en place, règle en début de session, surveillance ; `hooks/plugin-setup.sh` est une copie de `lib/plugin-setup.sh`) |
+| `.claude-plugin/plugin.json` | le plugin : version, réglage `lang` |
+| `hooks/hooks.json` | branche les trois hooks : `SessionStart` (mise en place, règle), `UserPromptSubmit` et `PostToolUse` (surveillance) |
+| `hooks/setup.sh` | mise en place par `hooks/plugin-setup.sh` (copie de `lib/plugin-setup.sh`), qui appelle `install.sh` |
+| `hooks/rule.sh` | injecte la règle (`claude-md.<lang>.md`) en début de session ; muet dans le `claude -p "/usage"` d'un relevé |
+| `hooks/watch.sh` | lance `usec-watch` depuis le dossier du plugin (le `PATH` d'un hook n'a pas forcément `~/.local/bin`) |
+| `fixtures/usage_sample.txt` | une sortie de `/usage` enregistrée, lue par `selftest.sh` (`usec --stdin`) |
 | `install.sh` | installe les scripts ; `--check` compare l'installé au dépôt, `--uninstall` retire tout. Sans plugin : `--hooks` branche usec-watch dans settings.json, `--claude-md` pose la règle |
 | `INSTALL.md` | procédure pour l'agent qui installe à la main, sans plugin |
-| `selftest.sh` | autotest sans quota consommé (fixture) ; `--live` pour un vrai appel |
+| `selftest.sh` | autotest sans quota consommé (`fixtures/usage_sample.txt`) ; `--live` pour un vrai appel |
 
 Ce n'est pas un skill : un skill ne se charge qu'à la demande, alors que la surveillance doit être
 active en permanence. Deux couches :

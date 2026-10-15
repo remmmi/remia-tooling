@@ -26,6 +26,9 @@ $ prismtext check .prismtext/runs/lot-essai/src-contenu-pages-methode --prism pr
 | `docs/` | références : le contrat, écrire un adaptateur, écrire un prisme |
 | `tests/` | suite `node:test` et cas réel (une page réécrite, une variante cassée) |
 | `CLAUDE.md` | ce qu'un agent doit savoir en arrivant dans ce dossier |
+| `AGENTS.md` | renvoi vers `CLAUDE.md` pour les agents qui lisent `AGENTS.md` |
+| `package.json` | déclare la CLI `prismtext` (Node ≥ 18) et les scripts `test` et `selftest` ; aucune dépendance |
+| `.gitignore` | écarte `node_modules/` et les traces d'exécution `.prismtext/runs/` |
 
 ## Ce qui est vérifié
 
