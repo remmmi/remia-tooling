@@ -1,0 +1,299 @@
+#!/usr/bin/env bash
+# vue — ouvrir à côté de l'agent ce que l'utilisateur doit voir, saisir ou lire (herdr, sinon tmux).
+#
+#   vue saisir <fichier> "<quoi coller>" [--secret]   nano dans un pane neuf, focus dessus ; le pane se
+#                                                     ferme quand l'utilisateur quitte nano
+#   vue lire <fichier> [+N] [--sous <fichier2> [+N]] [--numeros]  nano confortable (retour à la ligne, souris) ;
+#                                                     --sous : <fichier> en haut, <fichier2> en dessous
+#   vue montrer <nom> <commande…>                     commande dans un pane nommé, sans prendre le focus ;
+#                                                     réutilise le pane <nom> s'il existe
+#   vue etat <pane>                                   « nano ouvert », « shell », « occupé : <prog> » ou « fermé »
+#   vue attendre <pane> [secondes]                    rend la main quand le pane est fermé (défaut 1800 s)
+#   vue fermer <pane> [--force]                       refuse si nano y est encore ouvert
+#   vue secret <fichier>                              empreinte d'un fichier sans jamais en montrer le contenu
+#   vue nettoyer <fichier>                            retire les lignes de consigne « vue: » posées par saisir
+#
+# Sortie : l'identifiant du pane ouvert (stdout), une ligne par écart (stderr). VUE_DRY=1 imprime les
+# commandes herdr/tmux au lieu de les lancer (autotest).
+set -euo pipefail
+
+VERSION="1.0.0"
+NANO_LIRE=(--softwrap --atblanks --mouse --indicator --smarthome --zap --minibar --stateflags)
+NANO_SAISIR=(--softwrap --atblanks --mouse)
+
+die() { echo "vue: $*" >&2; exit 2; }
+q() { printf '%q' "$1"; }
+
+backend() {
+    if [ "${HERDR_ENV:-}" = 1 ] && command -v herdr >/dev/null; then echo herdr
+    elif [ -n "${TMUX:-}" ] && command -v tmux >/dev/null; then echo tmux
+    else echo aucun; fi
+}
+
+dry() { [ "${VUE_DRY:-}" = 1 ]; }
+
+# Largeur du pane courant : sous 120 colonnes, deux colonnes de 60 ne montrent plus rien → on coupe en bas.
+direction() {
+    local w=200
+    if dry; then w=${VUE_LARGEUR:-200}
+    elif [ "$(backend)" = herdr ]; then
+        w=$(herdr pane layout --pane "$HERDR_PANE_ID" | jq -r '.result.layout.panes[] | select(.pane_id=="'"$HERDR_PANE_ID"'") | .rect.width' 2>/dev/null || echo 200)
+    elif [ "$(backend)" = tmux ]; then
+        w=$(tmux display -p '#{pane_width}')
+    fi
+    [ "${w:-200}" -lt 120 ] && echo down || echo right
+}
+
+# split <direction> <focus 0|1> [pane parent] → id du nouveau pane
+split() {
+    local dir=$1 focus=$2 parent=${3:-}
+    if dry; then echo "herdr pane split ${parent:+--pane }${parent:---current} --direction $dir --ratio 0.5 --cwd $PWD$([ "$focus" = 1 ] && echo ' --focus')" >&2; echo "w0:p${RANDOM}"; return; fi
+    case $(backend) in
+        herdr)
+            local args=(pane split --direction "$dir" --ratio 0.5 --cwd "$PWD")
+            if [ -n "$parent" ]; then args+=(--pane "$parent"); else args+=(--current); fi
+            [ "$focus" = 1 ] && args+=(--focus)
+            # Le serveur herdr peut avoir été lancé depuis un shell Claude : sans ça, un `claude` du pane ne sauverait rien.
+            args+=(--env CLAUDE_CODE_CHILD_SESSION=)
+            herdr "${args[@]}" | jq -r .result.pane.pane_id ;;
+        tmux)
+            local t=(-h); [ "$dir" = down ] && t=(-v)
+            [ "$focus" = 1 ] || t+=(-d)
+            [ -n "$parent" ] && t+=(-t "$parent")
+            tmux split-window "${t[@]}" -c "$PWD" -P -F '#{pane_id}' ;;
+    esac
+}
+
+run() {  # run <pane> <ligne de commande>
+    if dry; then echo "herdr pane run $1 $2" >&2; return; fi
+    case $(backend) in
+        herdr) herdr pane run "$1" "$2" >/dev/null ;;
+        tmux) tmux send-keys -t "$1" -l "$2" && tmux send-keys -t "$1" Enter ;;
+    esac
+}
+
+nommer() {
+    dry && { echo "herdr pane rename $1 $2" >&2; return; }
+    case $(backend) in
+        herdr) herdr pane rename "$1" "$2" >/dev/null ;;
+        tmux) tmux select-pane -t "$1" -T "$2" ;;
+    esac
+}
+
+existe() {
+    case $(backend) in
+        herdr) herdr pane get "$1" >/dev/null 2>&1 ;;
+        tmux) tmux list-panes -a -F '#{pane_id}' | grep -qx -- "$1" ;;
+        *) return 1 ;;
+    esac
+}
+
+premier_plan() {  # programme au premier plan du pane, vide si c'est le shell (prompt rendu)
+    local p
+    case $(backend) in
+        herdr) p=$(herdr pane process-info --pane "$1" 2>/dev/null \
+                 | jq -r '.result.process_info.foreground_processes[0].name // ""') ;;
+        tmux) p=$(tmux display -p -t "$1" '#{pane_current_command}') ;;
+    esac
+    case $p in bash|zsh|sh|dash|fish|-bash|-zsh) p="" ;; esac
+    echo "$p"
+}
+
+sans_multiplexeur() {
+    echo "vue: ni herdr ni tmux ; à proposer à l'utilisateur :" >&2
+    echo "! $1"
+    exit 3
+}
+
+# Commande nano (une ligne shell) ; le `; exit` ferme le pane à la sortie de nano.
+ligne_nano() {  # ligne_nano <mode lire|saisir> <fichier> [+N]
+    local mode=$1 f=$2 pos=${3:-} opts=() rc
+    if [ "$mode" = lire ]; then opts=("${NANO_LIRE[@]}"); else opts=("${NANO_SAISIR[@]}"); fi
+    case $f in
+        *-traduit.md)
+            # couleurs du skill decode : explication ⟦ ⟧ en vert
+            rc=$(ls -1 "$HOME"/.claude/plugins/cache/remia-tooling/decode/*/decode.nanorc 2>/dev/null | sort -V | tail -n 1 || true)
+            [ -n "$rc" ] && opts=(--rcfile "$rc" "${opts[@]}") ;;
+    esac
+    local s="nano"
+    for o in "${opts[@]}"; do s+=" $(q "$o")"; done
+    [ -n "$pos" ] && s+=" $pos"
+    echo "$s $(q "$f"); exit"
+}
+
+marque() {  # ligne de consigne selon le type de fichier
+    case $1 in
+        *.md|*.html|*.htm|*.xml) echo "<!-- vue: $2 — puis Ctrl+O, Entrée, Ctrl+X -->" ;;
+        *) echo "# vue: $2 — puis Ctrl+O, Entrée, Ctrl+X" ;;
+    esac
+}
+
+cmd_saisir() {
+    local f="" consigne="" secret=0
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --secret) secret=1 ;;
+            *) if [ -z "$f" ]; then f=$1; elif [ -z "$consigne" ]; then consigne=$1; else die "argument en trop : $1"; fi ;;
+        esac; shift
+    done
+    [ -n "$f" ] && [ -n "$consigne" ] || die 'usage : vue saisir <fichier> "<quoi coller>" [--secret]'
+    local d; d=$(dirname -- "$f")
+    if [ "$secret" = 1 ]; then
+        mkdir -p -m 700 -- "$d"
+        # Un secret dans un dépôt git doit être ignoré par lui, sinon il part au prochain commit.
+        if git -C "$d" rev-parse --is-inside-work-tree >/dev/null 2>&1 \
+           && ! git -C "$d" check-ignore -q -- "$(realpath -m -- "$f")"; then
+            die "$f est suivi par git (pas dans .gitignore) : secret refusé ici ; ~/.secrets/<nom> convient"
+        fi
+        ( umask 077; touch -- "$f" ); chmod 600 -- "$f"
+    else
+        mkdir -p -- "$d"; touch -- "$f"
+    fi
+    # Fichier vide : on pose la consigne et le curseur sur la ligne d'après. Fichier rempli : on l'ouvre tel quel.
+    local pos=""
+    if [ ! -s "$f" ]; then marque "$f" "$consigne" > "$f"; pos="+2"; fi
+    local ligne; ligne=$(ligne_nano saisir "$f" "$pos")
+    [ "$(backend)" = aucun ] && ! dry && sans_multiplexeur "${ligne%; exit}"
+    local id; id=$(split "$(direction)" 1)
+    nommer "$id" "$(basename -- "$f")"
+    run "$id" "$ligne"
+    echo "$id"
+}
+
+cmd_lire() {
+    local f="" pos="" f2="" pos2="" sous=0
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --sous) sous=1 ;;
+            --numeros) NANO_LIRE+=(--linenumbers) ;;
+            +[0-9]*) if [ "$sous" = 1 ]; then pos2=$1; else pos=$1; fi ;;
+            *) if [ "$sous" = 1 ]; then f2=$1; else f=$1; fi ;;
+        esac; shift
+    done
+    [ -n "$f" ] || die "usage : vue lire <fichier> [+N] [--sous <fichier2> [+N]] [--numeros]"
+    [ -r "$f" ] || die "illisible : $f"
+    [ "$sous" = 0 ] || [ -r "$f2" ] || die "illisible : ${f2:-(--sous sans fichier)}"
+    [ "$(backend)" = aucun ] && ! dry && sans_multiplexeur "$(ligne_nano lire "$f" "$pos" | sed 's/; exit$//')"
+    if [ "$sous" = 0 ]; then
+        local id; id=$(split "$(direction)" 1)
+        nommer "$id" "$(basename -- "$f")"
+        run "$id" "$(ligne_nano lire "$f" "$pos")"
+        echo "$id"
+    else
+        # L'original en haut, l'autre en dessous ; le focus va au second (c'est lui qu'on lit).
+        local haut bas
+        haut=$(split right 0)
+        bas=$(split down 1 "$haut")
+        nommer "$haut" "$(basename -- "$f")"; nommer "$bas" "$(basename -- "$f2")"
+        run "$haut" "$(ligne_nano lire "$f" "$pos")"
+        run "$bas" "$(ligne_nano lire "$f2" "$pos2")"
+        echo "$haut $bas"
+    fi
+}
+
+cmd_montrer() {
+    [ $# -ge 2 ] || die "usage : vue montrer <nom> <commande…>"
+    local nom=$1; shift
+    local ligne="$*"
+    [ "$(backend)" = aucun ] && ! dry && die "ni herdr ni tmux : rien à montrer, donner le résultat dans le message"
+    local id=""
+    if ! dry && [ "$(backend)" = herdr ]; then
+        id=$(herdr pane list --workspace "$HERDR_WORKSPACE_ID" \
+             | jq -r --arg n "$nom" '.result.panes[] | select(.label==$n) | .pane_id' | head -n 1)
+    fi
+    if [ -n "$id" ]; then
+        # Vue réutilisée : on interrompt ce qui y tourne, on attend le prompt, puis on relance.
+        herdr pane send-keys "$id" ctrl+c >/dev/null
+        local i; for i in 1 2 3 4 5 6 7 8 9 10; do [ -z "$(premier_plan "$id")" ] && break; sleep 0.3; done
+        [ -z "$(premier_plan "$id")" ] || die "le pane $nom ($id) n'a pas rendu le prompt après ctrl+c : $(premier_plan "$id")"
+    else
+        id=$(split "$(direction)" 0)
+        nommer "$id" "$nom"
+    fi
+    run "$id" "$ligne"
+    echo "$id"
+}
+
+cmd_etat() {
+    [ $# -eq 1 ] || die "usage : vue etat <pane>"
+    existe "$1" || { echo "fermé"; return 0; }
+    local p; p=$(premier_plan "$1")
+    case $p in
+        "") echo "shell" ;;
+        nano) echo "nano ouvert" ;;
+        *) echo "occupé : $p" ;;
+    esac
+}
+
+cmd_attendre() {
+    [ $# -ge 1 ] || die "usage : vue attendre <pane> [secondes]"
+    local fin=$(( $(date +%s) + ${2:-1800} ))
+    while existe "$1"; do
+        [ "$(date +%s)" -lt "$fin" ] || { echo "toujours ouvert"; return 1; }
+        sleep 2
+    done
+    echo "fermé"
+}
+
+cmd_fermer() {
+    [ $# -ge 1 ] || die "usage : vue fermer <pane> [--force]"
+    existe "$1" || { echo "déjà fermé"; return 0; }
+    if [ "${2:-}" != --force ] && [ "$(premier_plan "$1")" = nano ]; then
+        die "nano est encore ouvert dans $1 : l'utilisateur n'a peut-être pas enregistré (--force pour fermer quand même)"
+    fi
+    case $(backend) in
+        herdr) herdr pane close "$1" >/dev/null ;;
+        tmux) tmux kill-pane -t "$1" ;;
+    esac
+    echo "fermé"
+}
+
+cmd_secret() {
+    [ $# -eq 1 ] || die "usage : vue secret <fichier>"
+    local f=$1
+    [ -e "$f" ] || { echo "absent : $f"; return 1; }
+    python3 -I - "$f" <<'PY'
+import os, sys, hashlib, stat, time
+f = sys.argv[1]
+st = os.stat(f)
+raw = open(f, "rb").read()
+lignes = [l for l in raw.decode("utf-8", "replace").splitlines()
+          if not l.lstrip().startswith(("# vue:", "<!-- vue:"))]
+utiles = [l for l in lignes if l.strip()]
+contenu = "\n".join(utiles)
+print(f"mode {stat.filemode(st.st_mode)} ({oct(st.st_mode & 0o777)})")
+print(f"modifié il y a {int(time.time() - st.st_mtime)} s")
+print(f"{len(utiles)} ligne(s) utile(s), {len(contenu)} caractère(s) hors consigne")
+for i, l in enumerate(utiles, 1):
+    k, sep, v = l.partition("=")
+    nom = f"{k.strip()} = " if sep and k.strip().replace("_", "").isalnum() else ""
+    val = v if nom else l
+    defauts = []
+    if val != val.strip(): defauts.append("espaces en bord")
+    if " " in val.strip(): defauts.append(f"{val.strip().count(' ')} espace(s) au milieu")
+    if val.strip()[:1] in "\"'" : defauts.append("guillemets")
+    print(f"  ligne {i} : {nom}{len(val.strip())} car." + (" — " + ", ".join(defauts) if defauts else ""))
+print("empreinte sha256 :", hashlib.sha256(contenu.encode()).hexdigest()[:12])
+if st.st_mode & 0o077:
+    print("ÉCART : lisible par d'autres que le propriétaire (chmod 600)")
+PY
+}
+
+cmd_nettoyer() {
+    [ $# -eq 1 ] || die "usage : vue nettoyer <fichier>"
+    sed -i -e '/^[[:space:]]*# vue:/d' -e '/^[[:space:]]*<!-- vue:.*-->[[:space:]]*$/d' -- "$1"
+}
+
+c=${1:-}; [ $# -gt 0 ] && shift
+case $c in
+    saisir) cmd_saisir "$@" ;;
+    lire) cmd_lire "$@" ;;
+    montrer) cmd_montrer "$@" ;;
+    etat) cmd_etat "$@" ;;
+    attendre) cmd_attendre "$@" ;;
+    fermer) cmd_fermer "$@" ;;
+    secret) cmd_secret "$@" ;;
+    nettoyer) cmd_nettoyer "$@" ;;
+    --version|version) echo "vue $VERSION" ;;
+    *) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; [ -z "$c" ] || [ "$c" = -h ] || [ "$c" = --help ] || exit 2 ;;
+esac

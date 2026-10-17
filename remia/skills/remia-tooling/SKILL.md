@@ -2,12 +2,12 @@
 name: remia-tooling
 description: >
   Point dépôt vs local des plugins de la marketplace remia-tooling (remia, rename-herdr, usec,
-  simple, chatroom, markitdown, voxtunnel) : ce qui est installé, en retard, nouveau, encore installé à la main ;
+  simple, chatroom, markitdown, herdr-vues, voxtunnel) : ce qui est installé, en retard, nouveau, encore installé à la main ;
   proposer installations et migrations, mémoriser les réponses, nettoyer après une désactivation.
   Déclenche sur toute mention de remia-tooling ou "remia", "mes tools", "mes outils du dépôt",
   "qu'est-ce qui est à jour", "installe <outil du dépôt>", "mets à jour mes outils", "migre cette
   machine", et sur un message [remia-tooling] injecté par un hook.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # remia-tooling

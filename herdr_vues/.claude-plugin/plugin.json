@@ -1,0 +1,7 @@
+{
+  "name": "herdr-vues",
+  "version": "1.0.0",
+  "description": "Skill herdr-vues et commande vue : ce que l'utilisateur doit saisir (secrets, collages), lire (brouillons, textes longs) ou voir vivre (logs, commandes longues) s'ouvre dans un pane herdr à côté, pas dans le chat.",
+  "author": { "name": "remmmi" },
+  "dependencies": ["remia"]
+}

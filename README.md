@@ -20,9 +20,10 @@ Ce README est la procédure de référence. Pour mettre une machine sur ce syst�
 | `decode` | skill `/decode:decode` : comprendre le texte d'un autre (mainteneur, issue, doc, LLM) paragraphe par paragraphe, sans résumer, code à l'appui | — | rien (glossaire dans `~/.config/remia-tooling/decode/`) |
 | `voxtunnel` | skill d'installation et de diagnostic de [Voxtunnel](https://github.com/remmmi/voxtunnel) (le micro du poste vers un serveur, par SSH) | — | rien d'automatique : l'application s'installe par le skill, à la demande |
 | `chatroom` | skill de salon Agent Room : entrer focus et terse sur une URL agent-room.com, écouter, travailler par le board, sortir seulement sur « au revoir » de l'hôte | — | rien |
+| `herdr-vues` | skill et commande `vue` : ce que l'utilisateur doit saisir (secrets, collages), lire (brouillons, textes longs) ou voir vivre (logs, commandes longues) s'ouvre dans un pane herdr à côté, pas dans le chat | — | rien (la commande `vue` vient avec le plugin) |
 | `markitdown` | skill d'aiguillage des documents non-markdown (PDF, Word, Excel, PowerPoint…) : source de contenu, le document est converti en Markdown avant lecture ; règle en début de session, commande `to-md` | — | un environnement Python dans `~/.local/share/markitdown/` (350 Mo environ), `to-md` dans `~/.local/bin` |
 
-Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`, `skills/decode/`, `skills/chatroom/`, `markitdown/`).
+Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`, `skills/decode/`, `skills/chatroom/`, `markitdown/`, `herdr_vues/`).
 
 `markitdown` s'installe aussi sans Claude Code, pour tout agent qui sait lancer un script et lire un
 fichier d'instructions : [`markitdown/INSTALL.md`](markitdown/INSTALL.md).

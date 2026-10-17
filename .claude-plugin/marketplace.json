@@ -1,6 +1,8 @@
 {
   "name": "remia-tooling",
-  "owner": { "name": "remmmi" },
+  "owner": {
+    "name": "remmmi"
+  },
   "metadata": {
     "description": "Outils pour Claude Code sur les VPS et postes de travail (Linux, systemd utilisateur)"
   },
@@ -34,6 +36,11 @@
       "name": "chatroom",
       "source": "./skills/chatroom",
       "description": "Skill chatroom : rejoindre un salon Agent Room focus et terse, écouter, travailler par le board, sortir seulement sur « au revoir » de l'hôte."
+    },
+    {
+      "name": "herdr-vues",
+      "source": "./herdr_vues",
+      "description": "Skill herdr-vues et commande vue : secrets et collages saisis dans un pane nano, textes longs lus dans nano confortable, logs et commandes longues montrés dans une vue nommée, au lieu du chat."
     },
     {
       "name": "markitdown",

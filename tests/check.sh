@@ -25,9 +25,11 @@ same "decode : plugin.json = SKILL.md"                    "$(manifest skills/dec
 same "markitdown : plugin.json = bin/to-md"                "$(manifest markitdown)" "$(sed -n 's/^VERSION="\(.*\)"$/\1/p' markitdown/bin/to-md)"
 same "markitdown : plugin.json = SKILL.md"                "$(manifest markitdown)" "$(front markitdown/skills/markitdown/SKILL.md)"
 same "chatroom : plugin.json = SKILL.md"                  "$(manifest skills/chatroom)" "$(front skills/chatroom/SKILL.md)"
+same "herdr-vues : plugin.json = SKILL.md"                "$(manifest herdr_vues)" "$(front herdr_vues/skills/herdr-vues/SKILL.md)"
+same "herdr-vues : plugin.json = bin/vue"                 "$(manifest herdr_vues)" "$(sed -n 's/^VERSION="\(.*\)"$/\1/p' herdr_vues/bin/vue)"
 
 # ── chaque version figure dans le tableau « Versions » du README de l'outil
-for d in remia rename_herdr usec skills/simple skills/decode skills/chatroom markitdown; do
+for d in remia rename_herdr usec skills/simple skills/decode skills/chatroom markitdown herdr_vues; do
   v=$(manifest "$d")
   grep -q "^| $v |" "$d/README.md" && good "$d/README.md : ligne $v dans Versions" || bad "$d/README.md : pas de ligne $v dans Versions"
 done
@@ -76,7 +78,7 @@ done
 
 # ── rien de personnel dans ce qui est distribué (chemin absolu d'un compte, nom de machine ou de projet)
 perso=$(grep -rnIP '(?<![\w$}])/home/[a-z0-9_-]+/|kilorem|kilometrack' --exclude-dir=.git \
-          .claude-plugin remia rename_herdr usec skills markitdown lib bootstrap.sh README.md 2>/dev/null || true)
+          .claude-plugin remia rename_herdr usec skills markitdown herdr_vues lib bootstrap.sh README.md 2>/dev/null || true)
 if [ -n "$perso" ]; then
   bad "chemin ou nom personnel dans les fichiers distribués :"; sed 's/^/    /' <<<"$perso"
 else
@@ -85,13 +87,13 @@ fi
 
 if [ "$QUICK" = 0 ]; then
   if command -v claude >/dev/null; then
-    for d in . remia rename_herdr usec skills/simple skills/decode markitdown; do
+    for d in . remia rename_herdr usec skills/simple skills/decode markitdown herdr_vues; do
       claude plugin validate "$d" >/dev/null 2>&1 && good "claude plugin validate $d" || bad "claude plugin validate $d"
     done
   else
     echo "--  claude introuvable : validation des manifestes sautée"
   fi
-  for t in tests/plugin-setup-test.sh remia/selftest.sh usec/selftest.sh markitdown/selftest.sh; do
+  for t in tests/plugin-setup-test.sh remia/selftest.sh usec/selftest.sh markitdown/selftest.sh herdr_vues/selftest.sh; do
     out=$("$t" 2>&1) && good "$t : $(tail -n 1 <<<"$out")" || { bad "$t : $(tail -n 1 <<<"$out")"; grep '^KO' <<<"$out" | sed 's/^/    /'; }
   done
 fi
