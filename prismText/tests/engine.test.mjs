@@ -498,3 +498,53 @@ test('prisme : requires / produces lus, affiches, et brief refuse un input incom
   assert.equal(spawnSync('node', [CLI, 'brief', prismPath, dir]).status, 0);
   assert.equal(loadPrism(PRISM).requires, null, 'contrat optionnel : copywriter-b2b n en declare pas');
 });
+
+// Contrats JSON Schema portes par le prisme : input_schema (verifie par
+// brief) et output_schema (verifie par check --prism), tamponnes.
+test('prisme : input_schema et output_schema, validateur zero dependance, tamponnes, verifies par brief et check', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismtext-run-'));
+  const prismPath = join(dir, 'p.md');
+  writeFileSync(join(dir, 'in.schema.json'), JSON.stringify({
+    type: 'object', required: ['references', 'segments'],
+    properties: {
+      references: { type: 'array', contains: { type: 'object', properties: { id: { const: 'specs' } }, required: ['id'] } },
+      segments: { type: 'array', minItems: 1, items: { type: 'object', required: ['id'], properties: { id: { enum: ['description'] } } } },
+    },
+  }));
+  writeFileSync(join(dir, 'out.schema.json'), JSON.stringify({
+    type: 'object', required: ['segments'],
+    properties: { segments: { type: 'array', minItems: 1, maxItems: 1, items: { type: 'object', properties: { text: { type: 'string', minLength: 10, pattern: '^[^<]*(<strong>[^<]*</strong>[^<]*)*$' } } } } },
+  }));
+  writeFileSync(prismPath, '---\nid: p\nversion: 1.0.0\ndescription: test\ninput_schema: in.schema.json\noutput_schema: out.schema.json\n---\nROLE\n');
+  const p1 = loadPrism(prismPath);
+  assert.equal(p1.inputSchema.required[0], 'references');
+  assert.equal(p1.outputSchema.properties.segments.maxItems, 1);
+  writeFileSync(join(dir, 'out.schema.json'), JSON.stringify({ type: 'object' }));
+  assert.notEqual(loadPrism(prismPath).sha256, p1.sha256, 'les schemas comptent dans l empreinte');
+  writeFileSync(join(dir, 'out.schema.json'), JSON.stringify({
+    type: 'object', required: ['segments'],
+    properties: { segments: { type: 'array', minItems: 1, maxItems: 1, items: { type: 'object', properties: { text: { type: 'string', minLength: 10, pattern: '^[^<]*(<strong>[^<]*</strong>[^<]*)*$' } } } } },
+  }));
+  const i2 = withRefs();
+  i2.segments = [{ id: 'description', text: i2.segments[1].text }];
+  i2.references = i2.references.filter((r) => r.id !== 'specs');
+  writeFileSync(join(dir, 'input.json'), JSON.stringify(i2));
+  const r1 = spawnSync('node', [CLI, 'brief', prismPath, dir], { encoding: 'utf8' });
+  assert.equal(r1.status, 2);
+  assert.match(r1.stderr, /references : aucun element ne satisfait contains/);
+  i2.references = withRefs().references;
+  writeFileSync(join(dir, 'input.json'), JSON.stringify(i2));
+  assert.equal(spawnSync('node', [CLI, 'brief', prismPath, dir]).status, 0);
+  const res = { prismtext: '1', prism: { id: p1.id, version: p1.version, sha256: p1.sha256 }, variant: 'a',
+    segments: [{ id: 'description', text: 'Un texte en <strong>gras</strong> conforme.' }],
+    concepts: [], ajouts: [], inverse: [] };
+  writeFileSync(join(dir, 'result-a.json'), JSON.stringify(res));
+  const ok = spawnSync('node', [CLI, 'check', dir, '--prism', prismPath], { encoding: 'utf8' });
+  assert.ok(!/contrat-sortie/.test(ok.stdout), ok.stdout);
+  res.segments[0].text = 'Un texte avec <em>autre</em> balise.';
+  writeFileSync(join(dir, 'result-a.json'), JSON.stringify(res));
+  const ko = spawnSync('node', [CLI, 'check', dir, '--prism', prismPath], { encoding: 'utf8' });
+  assert.equal(ko.status, 1);
+  assert.match(ko.stdout, /contrat-sortie/);
+  assert.equal(loadPrism(PRISM).inputSchema, null);
+});

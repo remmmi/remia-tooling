@@ -58,6 +58,30 @@ produces: description = prose, 2 a 3 paragraphes, <strong> seul balisage ; resum
 - `prismtext prism <fichier>` affiche les deux (JSON) ; les deux sont optionnels, un prisme sans
   contrat accepte tout input valide.
 
+### En JSON Schema : `input_schema` et `output_schema`
+
+Pour un générateur d'entrées ou un dispatcheur écrit dans n'importe quel langage, le contrat se
+donne aussi en JSON Schema (draft 2020-12), deux fichiers à côté du prisme :
+
+```
+input_schema: fiche-produit-lcm.input.schema.json
+output_schema: fiche-produit-lcm.output.schema.json
+```
+
+- `input_schema` s'applique à `input.json` entier : `brief` le valide et refuse (exit 2) avec le
+  chemin JSON de chaque erreur (`$.references : aucun element ne satisfait contains`).
+- `output_schema` s'applique à `result.json` entier : `check --prism` le valide et produit
+  `contrat-sortie` (erreur) par écart.
+- Les deux fichiers entrent dans l'empreinte SHA-256 du prisme.
+- Le validateur est dans le moteur, sans dépendance (`engine/lib/schema.mjs`) ; il couvre type,
+  const, enum, required, properties, additionalProperties, items, minItems, maxItems, contains,
+  minLength, maxLength, pattern, minimum, maximum, allOf, anyOf, not, `$ref` local. Les autres
+  mots-clés sont ignorés, pas refusés.
+- Un schéma dit la forme (un segment `description`, pas d'autre balise que `<strong>`), pas le
+  sens (« 2 à 3 paragraphes », « jamais de variante ») : le sens reste dans les règles du prisme,
+  la section `VERIFICATEUR` et le module `check`. `requires` / `produces` restent le raccourci
+  lisible ; quand les deux existent, les deux s'appliquent.
+
 ## Section `VERIFICATEUR` et module de contrôle
 
 Le corps peut contenir une ligne `VERIFICATEUR` seule : ce qui précède va au rédacteur, ce qui

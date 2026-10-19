@@ -19,6 +19,7 @@
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { resolve, dirname } from 'node:path';
+import { validateSchema, formatErrors } from './schema.mjs';
 
 export function loadPrism(path) {
   const raw = readFileSync(path, 'utf8');
@@ -41,6 +42,16 @@ export function loadPrism(path) {
     try { mod = readFileSync(check, 'utf8'); } catch (e) { throw new Error(`${path} : module de controle "${meta.check}" illisible (${e.message})`); }
     hash.update('\n--- check ---\n').update(mod);
   }
+  // Contrats JSON Schema : fichiers relatifs au prisme, tamponnes avec lui.
+  const schemas = {};
+  for (const k of ['input_schema', 'output_schema']) {
+    if (!meta[k]) { schemas[k] = null; continue; }
+    const sp = resolve(dirname(path), meta[k]);
+    let raw2;
+    try { raw2 = readFileSync(sp, 'utf8'); } catch (e) { throw new Error(`${path} : ${k} "${meta[k]}" illisible (${e.message})`); }
+    try { schemas[k] = JSON.parse(raw2); } catch (e) { throw new Error(`${sp} : JSON invalide (${e.message})`); }
+    hash.update(`\n--- ${k} ---\n`).update(raw2);
+  }
   const [body, verifier] = m[2].trim().split(/^VERIFICATEUR\s*$/mu);
   const requires = meta.requires ? parseRequires(meta.requires, path) : null;
   const produces = meta.produces ? parseProduces(meta.produces) : null;
@@ -53,6 +64,8 @@ export function loadPrism(path) {
     verifier: verifier ? verifier.trim() : null,
     requires,
     produces,
+    inputSchema: schemas.input_schema,
+    outputSchema: schemas.output_schema,
     check,
     sha256: hash.digest('hex'),
     path,
@@ -92,10 +105,11 @@ function parseProduces(src) {
   });
 }
 
-// Verifie qu'un input satisfait le contrat d'entree du prisme ; rend la
-// liste des manques (vide = conforme).
+// Verifie qu'un input satisfait le contrat d'entree du prisme (requires et
+// input_schema) ; rend la liste des manques (vide = conforme).
 export function missingRequirements(prism, input) {
   const out = [];
+  if (prism.inputSchema) out.push(...formatErrors(validateSchema(input, prism.inputSchema)));
   if (!prism.requires) return out;
   const refs = new Map((input.references || []).map((r) => [r.id, r]));
   for (const need of prism.requires.references) {
@@ -110,14 +124,18 @@ export function missingRequirements(prism, input) {
   return out;
 }
 
-// Execute le module de controle du prisme, s'il en a un.
+// Contrat de sortie (output_schema) puis module de controle du prisme.
 export async function prismCheck(prism, input, result) {
-  if (!prism?.check) return [];
+  const out = [];
+  if (prism?.outputSchema) {
+    for (const e of formatErrors(validateSchema(result, prism.outputSchema))) out.push({ level: 'error', segment: '*', code: 'contrat-sortie', msg: e });
+  }
+  if (!prism?.check) return out;
   const mod = await import(`file://${prism.check}`);
   if (typeof mod.check !== 'function') throw new Error(`${prism.check} : export "check" attendu`);
   const issues = await mod.check({ input, result });
   if (!Array.isArray(issues)) throw new Error(`${prism.check} : check doit rendre un tableau d issues`);
-  return issues.map((i) => ({ level: i.level === 'error' ? 'error' : 'warn', segment: i.segment || '*', code: String(i.code), msg: String(i.msg || '') }));
+  return out.concat(issues.map((i) => ({ level: i.level === 'error' ? 'error' : 'warn', segment: i.segment || '*', code: String(i.code), msg: String(i.msg || '') })));
 }
 
 export function stamp(prism) {

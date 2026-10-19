@@ -34,6 +34,8 @@ Contrats (optionnels, frontmatter) : `requires` dit ce que l input doit
 porter (references avec rang et kind, segments) et `brief` refuse un input
 incomplet ; `produces` dit ce que le prisme rend (segment = format), pour le
 dispatcheur en aval. Les deux lignes ci-dessus sont des exemples a adapter.
+En JSON Schema pour l amont et l aval : `input_schema: <prisme>.input.schema.json`
+et `output_schema: <prisme>.output.schema.json` (valides par brief et check).
 
 Versionnage : toute modification du corps change l'empreinte SHA-256 tamponnee
 dans les results. Monter la version (semver) a chaque changement de fond.
