@@ -548,3 +548,55 @@ test('prisme : input_schema et output_schema, validateur zero dependance, tampon
   assert.match(ko.stdout, /contrat-sortie/);
   assert.equal(loadPrism(PRISM).inputSchema, null);
 });
+
+test('exclusive : seule une reference texte de rang 1 ancre la valeur ; la source de rang 2 qui les enumere n ancre rien', () => {
+  const i2 = withRefs();
+  i2.references[0].text = 'Appareil à raclette 4 personnes';
+  i2.references.push({ id: 'src', trust: 2, text: 'Existe en 2, 4 et 6 personnes.' });
+  i2.references.push({ id: 'capacite', trust: 1, facts: { number_of_persons: '2, 4 et 6 personnes' }, exclusive: ['2 personnes', '4 personnes', '6 personnes'] });
+  const r = structuredClone(good);
+  const seg = 'offre.cartes.0.texte';
+  const d = r.segments.find((s) => s.id === seg);
+  d.text += ' Prévu pour 6 personnes.';
+  r.inverse.push({ segment: seg, cible: 'Prévu pour 6 personnes.', source: 'ref:capacite.number_of_persons' });
+  const codes = () => check(i2, r).issues.filter((x) => x.segment === seg && x.level === 'error').map((x) => x.code);
+  assert.ok(codes().includes('hors-perimetre'), 'le nom dit 4 personnes : 6 personnes est hors perimetre meme si la source les enumere');
+  d.text = d.text.replace('6 personnes', '4 personnes');
+  r.inverse.at(-1).cible = 'Prévu pour 4 personnes.';
+  assert.deepEqual(codes(), []);
+});
+
+test('maxOccurrences : les occurrences dans le nom de l article (reference texte de rang 1) ne comptent pas', () => {
+  const i2 = withRefs();
+  i2.references[0].text = 'Interrupteur décoré chalet';
+  i2.context.maxOccurrences = { chalet: 1 };
+  const r = structuredClone(good);
+  const seg = 'offre.cartes.0.texte';
+  const d = r.segments.find((s) => s.id === seg);
+  d.text = 'L Interrupteur décoré chalet habille une pièce de chalet. ' + d.text;
+  const by = () => check(i2, r).issues.filter((x) => x.segment === seg && x.code === 'occurrences-max');
+  assert.equal(by().length, 0, 'une fois dans le nom, une fois dans la prose');
+  d.text = d.text.replace('une pièce de chalet', 'une pièce de chalet ou un chalet');
+  assert.equal(by().length, 1);
+});
+
+test('chain : les constraints du segment ne sont pas reportees a l etape suivante', () => {
+  const dir = runDir(good);
+  execFileSync('node', [CLI, 'chain', dir, 'a', join(dir, 'suite')]);
+  const next = JSON.parse(readFileSync(join(dir, 'suite', 'input.json'), 'utf8'));
+  assert.ok(input.segments.some((s) => s.constraints), 'la fixture porte des constraints');
+  assert.ok(next.segments.every((s) => s.constraints === undefined));
+});
+
+test('module fiche-produit-lcm 1.3.0 : nom entier en strong, casse de la phrase, appel fournisseur, sujet repete', async () => {
+  const { check: lcm } = await import('../prisms/fiche-produit-lcm.check.mjs');
+  const input = { references: [{ id: 'name', trust: 1, text: 'Lit coffre primeflex 300' }] };
+  const run = (text) => lcm({ input, result: { segments: [{ id: 'description', text }] } }).filter((i) => i.level === 'error').map((i) => i.code);
+  const ok = 'Ce <strong>lit coffre</strong> réunit un sommier et un rangement sous le couchage, pour un coin nuit épuré. Il mesure 160x32.5x200 cm.\n\nSa finition tissu s accorde avec une chambre moderne. Le matelas est vendu séparément, et la livraison se fait en 3 colis, démontée.';
+  assert.deepEqual(run(ok), []);
+  assert.ok(run(ok.replace('<strong>lit coffre</strong>', '<strong>Lit coffre primeflex 300</strong>')).includes('r2-strong-nom-entier'));
+  assert.ok(run(ok.replace('<strong>lit coffre</strong>', '<strong>Lit coffre</strong>')).includes('r2-strong-casse'));
+  assert.ok(!run(ok.replace('Ce <strong>lit coffre</strong>', '<strong>Lit coffre</strong>')).includes('r2-strong-casse'), 'en tete de phrase la majuscule est celle de la phrase');
+  assert.ok(run(ok + " Pour toute dimension, n'hésitez pas à nous contacter.").includes('r16-appel-fournisseur'));
+  assert.ok(run(ok.replace('Sa finition', 'Il a une finition tissu. Il est moderne. Il convient à une chambre. Sa finition')).includes('r18-sujet-repete'));
+});

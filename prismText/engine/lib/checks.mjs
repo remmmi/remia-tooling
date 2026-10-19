@@ -38,7 +38,7 @@ function properNouns(text) {
 // Controles lexicaux, insensibles a la casse : termes interdits (contexte et
 // segment cumules) et nombre maximal d'occurrences d'un mot entier.
 const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-function lexical(text, ctx, c, fail) {
+function lexical(text, ctx, c, fail, refs = []) {
   const forbid = [...(ctx.forbid || []), ...(c.forbid || [])];
   for (const f of forbid) {
     const n = (text.match(new RegExp(escapeRe(f), 'giu')) || []).length;
@@ -48,9 +48,13 @@ function lexical(text, ctx, c, fail) {
     const m = text.match(new RegExp(p, 'giu'));
     if (m) fail('motif-interdit', `/${p}/ : "${m[0]}"`);
   }
+  // Le nom de l'article (reference texte de rang 1) ne compte pas dans les
+  // occurrences : « Interrupteur décoré chalet » ne consomme pas « chalet ».
   const max = { ...(ctx.maxOccurrences || {}), ...(c.maxOccurrences || {}) };
+  let counted = text;
+  for (const r of refs) if (r.trust === 1 && r.text) counted = counted.replace(new RegExp(escapeRe(r.text), 'giu'), ' ');
   for (const [w, m] of Object.entries(max)) {
-    const n = (text.match(new RegExp(`(?<![\\p{L}\\p{M}])${escapeRe(w)}(?![\\p{L}\\p{M}])`, 'giu')) || []).length;
+    const n = (counted.match(new RegExp(`(?<![\\p{L}\\p{M}])${escapeRe(w)}(?![\\p{L}\\p{M}])`, 'giu')) || []).length;
     if (n > m) fail('occurrences-max', `"${w}" ${n} fois > ${m}`);
   }
 }
@@ -72,15 +76,16 @@ export function references(input) {
 }
 
 // Valeurs exclusives (tailles, coloris, capacites) : une seule dans la cible,
-// et si une reference texte (le nom de l'article) en porte exactement une,
-// c'est celle-la. Deterministe : comparaison insensible a la casse.
+// et si une reference texte de rang 1 (le nom de l'article) en porte
+// exactement une, c'est celle-la. Une source de rang 2 (fiche fournisseur)
+// les enumere toutes : elle n'ancre rien. Deterministe, insensible a la casse.
 function exclusives(refs, text, fail) {
   const has = (t, v) => t.toLowerCase().includes(v.toLowerCase());
   for (const r of refs) {
     if (!r.exclusive.length) continue;
     const found = r.exclusive.filter((v) => has(text, v));
     if (!found.length) continue;
-    const named = refs.filter((x) => x.text !== null && x !== r).flatMap((x) => r.exclusive.filter((v) => has(x.text, v)));
+    const named = refs.filter((x) => x.text !== null && x !== r && x.trust === 1).flatMap((x) => r.exclusive.filter((v) => has(x.text, v)));
     const allowed = named.length === 1 ? named : null;
     const bad = allowed ? found.filter((v) => v !== allowed[0]) : (found.length > 1 ? found : []);
     if (bad.length) fail('hors-perimetre', `valeurs exclusives de "${r.id}" hors de cet article : ${bad.map((v) => `"${v}"`).join(', ')}${allowed ? ` (le nom dit "${allowed[0]}")` : ''}`);
@@ -152,7 +157,7 @@ export function check(input, result) {
     if (c.maxChars && d.text.length > c.maxChars) add('error', id, 'longueur-max', `${d.text.length} caracteres > ${c.maxChars}`);
     if (c.minChars && d.text.length < c.minChars) add('error', id, 'longueur-min', `${d.text.length} caracteres < ${c.minChars}`);
     if (!c.freeze) {
-      lexical(d.text, input.context || {}, c, (code, msg) => add('error', id, code, msg));
+      lexical(d.text, input.context || {}, c, (code, msg) => add('error', id, code, msg), refs);
       exclusives(refs, d.text, (code, msg) => add('error', id, code, msg));
     }
     const tol = c.lengthTolerance ?? input.context?.lengthTolerance ?? 0.35;

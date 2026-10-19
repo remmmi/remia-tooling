@@ -98,4 +98,5 @@ module entre dans l'empreinte SHA-256 du prisme : le changer change la version.
 
 `config.chains` déclare des suites (`"site": ["copywriter-b2b", "noia"]`). `prismtext chain`
 prépare l'input de l'étape suivante à partir d'une variante conforme ; il refuse une variante non
-conforme.
+conforme. Les `constraints` des segments ne sont pas reportées : chaque prisme porte ses bornes
+(`produces`, `output_schema`, module de contrôle).

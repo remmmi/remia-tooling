@@ -250,7 +250,9 @@ async function main() {
       mkdirSync(next, { recursive: true });
       writeFileSync(join(next, 'input.json'), JSON.stringify({
         ...input,
-        segments: input.segments.map((s) => ({ ...s, text: texts.get(s.id) })),
+        // Les bornes de longueur appartiennent a l etape : le prisme suivant
+        // porte les siennes (produces, output_schema, module), pas celles d avant.
+        segments: input.segments.map(({ constraints, ...s }) => ({ ...s, text: texts.get(s.id) })),
         lineage: [...(input.lineage || []), { ...result.prism, variant: result.variant }],
       }, null, 2) + '\n');
       return console.log(resolve(join(next, 'input.json')));

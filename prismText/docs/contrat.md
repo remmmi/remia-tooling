@@ -41,7 +41,8 @@ Un input = **un item entier** (une page, une fiche, un email), jamais un fragmen
 - Contrôles lexicaux, au niveau du contexte (tous les segments) ou d'un segment (`constraints`),
   insensibles à la casse : `forbid` (termes interdits, erreur `terme-interdit`), `forbidPatterns`
   (regex, erreur `motif-interdit`), `maxOccurrences` (`{ "montagne": 1 }`, mot entier, erreur
-  `occurrences-max`), `constraints.minChars` (erreur `longueur-min`).
+  `occurrences-max` ; les occurrences dans une référence texte de rang 1, le nom de l'article,
+  ne comptent pas), `constraints.minChars` (erreur `longueur-min`).
 
 Un prisme peut exiger certaines références et certains segments (`requires` dans son
 frontmatter, voir `docs/prismes.md`) : `brief` refuse un input qui ne les porte pas.
@@ -74,8 +75,9 @@ la source, le vérificateur peut y rattacher une phrase de la cible.
   vérificateur, mais aucune citation ne peut l'invoquer (`reference-non-citable`) ; sert à
   montrer un prix, un emballage, une impression sans qu'ils entrent dans le texte.
 - `exclusive` : valeurs mutuellement exclusives (tailles, coloris, capacités) ; une seule peut
-  figurer dans la cible, et si une référence texte (le nom de l'article) en porte exactement
-  une, c'est celle-là (`hors-perimetre`).
+  figurer dans la cible, et si une référence texte de rang 1 (le nom de l'article) en porte
+  exactement une, c'est celle-là (`hors-perimetre`). Une référence de rang 2 ou plus (fiche
+  fournisseur, qui les énumère toutes) n'ancre rien.
 - Citation d'une référence dans la carte inverse : extrait littéral, `ref:<id>` (son texte) ou
   `ref:<id>.<clé>` (un fait).
 
