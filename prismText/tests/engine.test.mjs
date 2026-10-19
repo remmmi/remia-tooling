@@ -469,12 +469,13 @@ test('prisme : requires / produces lus, affiches, et brief refuse un input incom
   const prismPath = join(dir, 'p.md');
   writeFileSync(prismPath, [
     '---', 'id: p', 'version: 1.0.0', 'description: test',
-    'requires: references name(trust 1, text), specs(trust 1, facts) ; segments description',
+    'requires: references name(trust 1, text), specs(trust 1, facts), prix?(text) ; segments description',
     'produces: description = prose, 2 a 3 paragraphes, <strong> seul balisage',
     '---', 'ROLE', '',
   ].join('\n'));
   const p = loadPrism(prismPath);
-  assert.deepEqual(p.requires.references.map((r) => r.id), ['name', 'specs']);
+  assert.deepEqual(p.requires.references.map((r) => r.id), ['name', 'specs', 'prix']);
+  assert.equal(p.requires.references[2].optional, true);
   assert.equal(p.requires.references[1].trust, 1);
   assert.equal(p.requires.references[1].kind, 'facts');
   assert.deepEqual(p.requires.segments, ['description']);

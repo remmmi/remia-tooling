@@ -11,7 +11,8 @@
 //
 // Contrats portes par le prisme, lisibles par l'amont (generateur d'input)
 // et l'aval (dispatcheur des textes), optionnels :
-//   requires: references name(trust 1, text), specs(trust 1, facts) ; segments description
+//   requires: references name(trust 1, text), specs?(trust 1, facts) ; segments description
+//   (un `?` apres l id = reference optionnelle, verifiee seulement si presente)
 //   produces: description = prose, 2 a 3 paragraphes, <strong> seul balisage ; autre = texte nu
 // `brief` refuse un input qui ne porte pas une reference ou un segment requis.
 
@@ -68,10 +69,10 @@ function parseRequires(src, path) {
       const t = item.trim();
       if (!t) continue;
       if (m[1] === 'segments') { out.segments.push(t); continue; }
-      const r = t.match(/^([a-zA-Z0-9_-]+)(?:\(([^)]*)\))?$/);
+      const r = t.match(/^([a-zA-Z0-9_-]+)(\?)?(?:\(([^)]*)\))?$/);
       if (!r) throw new Error(`${path} : reference requise illisible : "${t}"`);
-      const ref = { id: r[1] };
-      for (const opt of (r[2] || '').split(',')) {
+      const ref = { id: r[1], ...(r[2] ? { optional: true } : {}) };
+      for (const opt of (r[3] || '').split(',')) {
         const o = opt.trim();
         const tr = o.match(/^trust\s+(\d+)$/);
         if (tr) ref.trust = Number(tr[1]);
@@ -99,7 +100,7 @@ export function missingRequirements(prism, input) {
   const refs = new Map((input.references || []).map((r) => [r.id, r]));
   for (const need of prism.requires.references) {
     const r = refs.get(need.id);
-    if (!r) { out.push(`reference "${need.id}" absente`); continue; }
+    if (!r) { if (!need.optional) out.push(`reference "${need.id}" absente`); continue; }
     if (need.trust !== undefined && r.trust !== need.trust) out.push(`reference "${need.id}" : trust ${r.trust}, ${need.trust} attendu`);
     if (need.kind === 'text' && typeof r.text !== 'string') out.push(`reference "${need.id}" : "text" attendu`);
     if (need.kind === 'facts' && (typeof r.facts !== 'object' || r.facts === null)) out.push(`reference "${need.id}" : "facts" attendu`);

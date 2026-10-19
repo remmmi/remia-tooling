@@ -50,8 +50,8 @@ requires: references name(trust 1, text), specs(trust 1, facts), vision(trust 3,
 produces: description = prose, 2 a 3 paragraphes, <strong> seul balisage ; resume = texte nu, 120 a 155 caracteres
 ```
 
-- `requires` : références (id, et en option `trust N`, `text` ou `facts`) et segments que
-  l'input doit porter. `prismtext brief` refuse (exit 2) un input incomplet, en nommant le
+- `requires` : références (id, `?` si optionnelle, et en option `trust N`, `text` ou `facts`) et
+  segments que l'input doit porter. `prismtext brief` refuse (exit 2) un input incomplet, en nommant le
   manque ; l'amont sait donc exactement quoi produire.
 - `produces` : pour chaque segment rendu, le format en clair ; c'est la promesse faite à l'aval.
   Le moteur ne l'interprète pas, le module `check` du prisme le fait respecter.
