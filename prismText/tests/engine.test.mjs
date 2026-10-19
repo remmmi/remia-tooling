@@ -264,3 +264,200 @@ test('lot : creation, etat par source, rapport consolide, decision, application'
 test('selftest', () => {
   assert.equal(spawnSync('node', [CLI, 'selftest']).status, 0);
 });
+
+test('controles lexicaux : minChars, forbid, maxOccurrences (segment et contexte)', () => {
+  const i2 = structuredClone(input);
+  i2.context.forbid = ['Découvrez', 'dimensions généreuses'];
+  i2.context.maxOccurrences = { montagne: 1 };
+  const seg = i2.segments.find((s) => s.id === 'offre.cartes.0.texte');
+  seg.constraints = { ...(seg.constraints || {}), minChars: 5000, forbid: ['CMS'] };
+  const r = structuredClone(good);
+  const d = r.segments.find((s) => s.id === 'offre.cartes.0.texte');
+  d.text = 'Découvrez la montagne et la Montagne avec un CMS. ' + d.text;
+  const codes = check(i2, r).issues.filter((x) => x.segment === 'offre.cartes.0.texte');
+  const by = (code) => codes.filter((x) => x.code === code && x.level === 'error');
+  assert.equal(by('longueur-min').length, 1);
+  assert.equal(by('terme-interdit').length, 2, 'Découvrez (contexte) et CMS (segment)');
+  assert.equal(by('occurrences-max').length, 1, 'montagne 2 fois, insensible a la casse');
+  assert.ok(!check(input, good).issues.some((x) => ['longueur-min', 'terme-interdit', 'occurrences-max'].includes(x.code)));
+  assert.deepEqual(validateInput(i2), []);
+  i2.context.forbid = 'Découvrez';
+  assert.ok(validateInput(i2).some((e) => e.includes('context.forbid')));
+});
+
+test('decide --auto : decision automatique sur check vert, jamais forcee, applied l accepte', () => {
+  const dir = runDir(good);
+  const out = execFileSync('node', [CLI, 'decide', dir, 'a', '--auto'], { encoding: 'utf8' });
+  assert.match(out, /decision a enregistree/);
+  const dec = JSON.parse(readFileSync(join(dir, 'decision.json'), 'utf8'));
+  assert.equal(dec.par, 'auto');
+  assert.equal(dec.auto, true);
+  assert.equal(spawnSync('node', [CLI, 'applied', dir, 'a']).status, 0);
+  const bad = runDir(load('site-web.result-casse.json'));
+  assert.equal(spawnSync('node', [CLI, 'decide', bad, 'a', '--auto']).status, 1, 'non conforme : refuse');
+  assert.equal(spawnSync('node', [CLI, 'decide', bad, 'a', '--auto', '--force']).status, 2, '--auto et --force sont incompatibles');
+  assert.ok(!existsSync(join(bad, 'decision.json')));
+});
+
+// Entrees structurees de reference : matiere annexe a la source (specs,
+// vision, nom...), rangee par rang de confiance, citable par le verificateur.
+function withRefs() {
+  const i2 = structuredClone(input);
+  i2.references = [
+    { id: 'name', trust: 1, text: 'Bahut Tolentino chêne huilé 3 portes' },
+    { id: 'specs', trust: 1, facts: { dimensions: '153x85x50', weight: '48 kg' } },
+    { id: 'vision', trust: 3, facts: { colors: 'brun clair', branding: 'étiquette Tolentino', size_impression: 'environ 2 m' }, numeric: false, uncitable: ['branding', 'size_impression'] },
+  ];
+  return i2;
+}
+
+test('references : validation du contrat', () => {
+  const i2 = withRefs();
+  assert.deepEqual(validateInput(i2), []);
+  i2.references.push({ id: 'specs', trust: 1, text: 'doublon' });
+  assert.ok(validateInput(i2).some((e) => e.includes('references.3.id')));
+  i2.references = [{ id: 'x', trust: 0, text: 'rang invalide' }];
+  assert.ok(validateInput(i2).some((e) => e.includes('references.0.trust')));
+  i2.references = [{ id: 'x', trust: 1 }];
+  assert.ok(validateInput(i2).some((e) => e.includes('references.0')), 'text ou facts obligatoire');
+});
+
+test('references : chiffres et noms propres pris dans une reference = source ; vision numeric:false ne source aucun chiffre', () => {
+  const i2 = withRefs();
+  const r = structuredClone(good);
+  const seg = 'offre.cartes.0.texte';
+  const d = r.segments.find((s) => s.id === seg);
+  d.text += ' Il mesure 153x85x50 cm et pèse 48 kg, signé Tolentino.';
+  r.inverse.push({ segment: seg, cible: 'Il mesure 153x85x50 cm et pèse 48 kg, signé Tolentino.', source: 'ref:specs.dimensions' });
+  const codes = check(i2, r).issues.filter((x) => x.segment === seg);
+  assert.ok(!codes.some((x) => x.code === 'chiffre-invente'), JSON.stringify(codes));
+  assert.ok(!codes.some((x) => x.code === 'nom-propre-nouveau' && x.msg.includes('Tolentino')));
+  i2.references[2].facts.size_impression = 'environ 7 m';
+  d.text = d.text.replace('48 kg', '7 m');
+  r.inverse.at(-1).cible = r.inverse.at(-1).cible.replace('48 kg', '7 m');
+  assert.ok(check(i2, r).issues.some((x) => x.code === 'chiffre-invente' && x.msg.includes('"7"')), 'un chiffre que seule la vision porte est invente');
+});
+
+test('references : citation ref:<id>.<cle> resolue, non citable ou inconnue = erreur, extrait litteral d une reference texte accepte', () => {
+  const i2 = withRefs();
+  const r = structuredClone(good);
+  const seg = 'offre.cartes.0.texte';
+  const d = r.segments.find((s) => s.id === seg);
+  d.text += ' Brun clair, trois portes.';
+  const e = { segment: seg, cible: 'Brun clair, trois portes.', source: 'ref:vision.colors' };
+  r.inverse.push(e);
+  const run = () => check(i2, r).issues.filter((x) => x.segment === seg && x.level === 'error').map((x) => x.code);
+  assert.deepEqual(run(), []);
+  e.source = 'ref:vision.branding';
+  assert.ok(run().includes('reference-non-citable'));
+  e.source = 'ref:specs.inconnue';
+  assert.ok(run().includes('citation-source-introuvable'));
+  e.source = 'ref:nulle';
+  assert.ok(run().includes('citation-source-introuvable'));
+  e.source = 'chêne huilé 3 portes';
+  assert.deepEqual(run(), [], 'extrait litteral de la reference name');
+});
+
+test('inverse : "probleme" nomme par le verificateur = erreur portant ce code', () => {
+  const r = structuredClone(good);
+  const e = r.inverse.find((x) => x.segment === 'offre.cartes.3.texte');
+  e.probleme = 'conflit-de-rang';
+  const iss = check(input, r).issues.find((x) => x.code === 'conflit-de-rang');
+  assert.equal(iss?.level, 'error');
+  assert.equal(iss?.segment, 'offre.cartes.3.texte');
+});
+
+test('forbidPatterns : regex interdite (prix en euros)', () => {
+  const i2 = structuredClone(input);
+  i2.context.forbidPatterns = ['\\d[\\d\\s,.]*\\s?(€|euros?)'];
+  const r = structuredClone(good);
+  const d = r.segments.find((s) => s.id === 'offre.cartes.0.texte');
+  d.text += ' Supplément de 172,50 euros.';
+  assert.ok(check(i2, r).issues.some((x) => x.code === 'motif-interdit' && x.level === 'error'));
+  i2.context.forbidPatterns = ['(']; 
+  assert.ok(validateInput(i2).some((e) => e.includes('forbidPatterns')));
+});
+
+test('briefs : les references sont donnees au redacteur et au verificateur, par rang, avec la syntaxe de citation ; section VERIFICATEUR du prisme', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismtext-run-'));
+  const i2 = withRefs();
+  i2.context.rendu = 'x';
+  writeFileSync(join(dir, 'input.json'), JSON.stringify(i2));
+  const prismPath = join(dir, 'p.md');
+  writeFileSync(prismPath, '---\nid: p\nversion: 1.0.0\ndescription: test\n---\nROLE\n\nRedige.\n\nVERIFICATEUR\n\nV5 Emballage : probleme "emballage".\n');
+  execFileSync('node', [CLI, 'brief', prismPath, dir]);
+  const b = readFileSync(join(dir, 'brief-a.md'), 'utf8');
+  assert.match(b, /## References/);
+  assert.match(b, /rang 1[\s\S]*specs[\s\S]*dimensions : 153x85x50/);
+  assert.match(b, /branding[^\n]*non citable/);
+  assert.doesNotMatch(b, /V5 Emballage/, 'la section VERIFICATEUR ne va pas au redacteur');
+  const r = structuredClone(good);
+  delete r.inverse;
+  const p = loadPrism(prismPath);
+  r.prism = { id: p.id, version: p.version, sha256: p.sha256 };
+  writeFileSync(join(dir, 'result-a.json'), JSON.stringify(r));
+  execFileSync('node', [CLI, 'inverse-brief', dir, '--prism', prismPath]);
+  const ib = readFileSync(join(dir, 'inverse-brief-a.md'), 'utf8');
+  assert.match(ib, /## References/);
+  assert.match(ib, /ref:specs\.dimensions/);
+  assert.match(ib, /V5 Emballage/);
+  assert.match(ib, /"probleme"/);
+  assert.doesNotMatch(ib, /Redige\./, 'le corps redacteur du prisme ne va pas au verificateur');
+});
+
+test('prisme : module de controle declare dans le frontmatter, tamponne avec le prisme, execute par check --prism', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismtext-run-'));
+  const i2 = withRefs();
+  writeFileSync(join(dir, 'input.json'), JSON.stringify(i2));
+  const prismPath = join(dir, 'p.md');
+  writeFileSync(prismPath, '---\nid: p\nversion: 1.0.0\ndescription: test\ncheck: p.check.mjs\n---\nROLE\n');
+  writeFileSync(join(dir, 'p.check.mjs'), 'export function check({ input, result }) { return result.segments.some((s) => /bahut/i.test(s.text)) ? [{ level: "error", segment: "*", code: "mot-bahut", msg: "bahut vu" }] : []; }\n');
+  const p1 = loadPrism(prismPath);
+  assert.equal(p1.check, join(dir, 'p.check.mjs'));
+  writeFileSync(join(dir, 'p.check.mjs'), 'export function check() { return []; }\n');
+  assert.notEqual(loadPrism(prismPath).sha256, p1.sha256, 'le module compte dans l empreinte');
+  writeFileSync(join(dir, 'p.check.mjs'), 'export function check({ input, result }) { return result.segments.some((s) => /bahut/i.test(s.text)) ? [{ level: "error", segment: "*", code: "mot-bahut", msg: "bahut vu" }] : []; }\n');
+  const r = structuredClone(good);
+  r.prism = { id: p1.id, version: p1.version, sha256: p1.sha256 };
+  writeFileSync(join(dir, 'result-a.json'), JSON.stringify(r));
+  { const o = spawnSync("node", [CLI, "check", dir, "--prism", prismPath], { encoding: "utf8" }); assert.equal(o.status, 0, o.stdout + o.stderr); }
+  const seg = r.segments.find((s) => s.id === 'offre.cartes.0.texte');
+  seg.text += ' Un bahut.';
+  r.inverse.push({ segment: seg.id, cible: 'Un bahut.', source: 'ref:name' });
+  writeFileSync(join(dir, 'result-a.json'), JSON.stringify(r));
+  const out = spawnSync('node', [CLI, 'check', dir, '--prism', prismPath], { encoding: 'utf8' });
+  assert.equal(out.status, 1);
+  assert.match(out.stdout, /mot-bahut/);
+  assert.equal(spawnSync('node', [CLI, 'check', dir]).status, 0, 'sans --prism le module ne tourne pas');
+});
+
+test('references : citable:false sur la reference entiere, exclusive = une seule valeur, celle du nom', () => {
+  const i2 = withRefs();
+  i2.references.push({ id: 'prix', trust: 1, text: '730 euros', citable: false, numeric: false });
+  i2.references.push({ id: 'capacite', trust: 1, facts: { number_of_persons: '2, 4 et 6 personnes' }, exclusive: ['2 personnes', '4 personnes', '6 personnes'] });
+  i2.references[0].text = 'Appareil à raclette 4 personnes';
+  assert.deepEqual(validateInput(i2), []);
+  const r = structuredClone(good);
+  const seg = 'offre.cartes.0.texte';
+  const d = r.segments.find((s) => s.id === seg);
+  d.text += ' Prévu pour 4 personnes.';
+  r.inverse.push({ segment: seg, cible: 'Prévu pour 4 personnes.', source: 'ref:prix' });
+  const codes = () => check(i2, r).issues.filter((x) => x.segment === seg && x.level === 'error').map((x) => x.code);
+  assert.ok(codes().includes('reference-non-citable'));
+  r.inverse.at(-1).source = 'ref:capacite.number_of_persons';
+  assert.deepEqual(codes(), []);
+  d.text += ' Existe aussi en 6 personnes.';
+  r.inverse.push({ segment: seg, cible: 'Existe aussi en 6 personnes.', source: 'ref:capacite.number_of_persons' });
+  assert.ok(codes().includes('hors-perimetre'));
+});
+
+test('ajouts : nature "fait" = erreur, "enjolivement" = alerte, autre nature = contrat invalide', () => {
+  const r = structuredClone(good);
+  r.ajouts = [{ segment: 'offre.cartes.3.texte', texte: 'décrits plus bas', nature: 'enjolivement' }];
+  assert.deepEqual(validateResult(r), []);
+  assert.ok(!check(input, r).issues.some((x) => x.code === 'ajout-fait'));
+  r.ajouts[0].nature = 'fait';
+  assert.ok(check(input, r).issues.some((x) => x.code === 'ajout-fait' && x.level === 'error'));
+  r.ajouts[0].nature = 'autre';
+  assert.ok(validateResult(r).some((e) => e.includes('ajouts.0.nature')));
+});

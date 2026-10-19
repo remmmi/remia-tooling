@@ -50,15 +50,16 @@ export function sourceState(dir) {
   return out;
 }
 
-export function lotStatus(lotDir) {
+export async function lotStatus(lotDir) {
   const lot = readJson(join(lotDir, 'lot.json'));
-  const sources = lot.sources.map((s) => {
+  const sources = [];
+  for (const s of lot.sources) {
     const dir = join(lotDir, s.dir);
     const st = sourceState(dir);
     const checks = [];
     if (st.input) {
       for (const v of st.variants) {
-        const c = runCheck(dir, v.variant);
+        const c = await runCheck(dir, v.variant);
         const count = (codes) => c.issues.filter((i) => codes.includes(i.code)).length;
         const r = readJson(join(dir, `result-${v.variant}.json`));
         checks.push({
@@ -75,13 +76,13 @@ export function lotStatus(lotDir) {
         });
       }
     }
-    return { ref: s.ref, dir: s.dir, stage: st.stage, decision: st.decision, applied: st.applied, checks };
-  });
+    sources.push({ ref: s.ref, dir: s.dir, stage: st.stage, decision: st.decision, applied: st.applied, checks });
+  }
   return { name: lot.name, created: lot.created, dir: lotDir, sources };
 }
 
-export function lotReport(lotDir) {
-  const st = lotStatus(lotDir);
+export async function lotReport(lotDir) {
+  const st = await lotStatus(lotDir);
   const L = [];
   L.push(`# PrismText : lot ${st.name}`, '', `Cree le ${st.created}. Dossier : ${st.dir}`, '');
   L.push('| Source | Etape | Variante | Prisme | Conforme | Erreurs | Alertes | Retraits voulus | Pertes | Ajouts | Decision |');

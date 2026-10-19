@@ -45,6 +45,29 @@
         },
         "rendu": {
           "type": "string"
+        },
+        "forbid": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "termes interdits dans tous les segments (insensible a la casse) : erreur terme-interdit"
+        },
+        "forbidPatterns": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "regex interdites (flags giu) : erreur motif-interdit"
+        },
+        "maxOccurrences": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "description": "mot entier -> nombre maximal d'occurrences par segment : erreur occurrences-max"
         }
       }
     },
@@ -104,6 +127,30 @@
               "lengthTolerance": {
                 "type": "number",
                 "minimum": 0
+              },
+              "minChars": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "forbid": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "forbidPatterns": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "maxOccurrences": {
+                "type": "object",
+                "additionalProperties": {
+                  "type": "integer",
+                  "minimum": 0
+                }
               }
             }
           }
@@ -113,6 +160,59 @@
     "lineage": {
       "type": "array",
       "description": "prismes deja appliques (commande chain)"
+    },
+    "references": {
+      "type": "array",
+      "description": "matiere annexe a la source (nom, specs, lecture de photo...), par rang de confiance ; le redacteur la recoit, le verificateur la cite (extrait litteral, ref:<id>, ref:<id>.<cle>). Ses chiffres et noms propres comptent comme source sauf numeric:false. citable:false ou les cles uncitable ne sourcent rien.",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "trust"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]+$"
+          },
+          "trust": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "1 = le plus sur ; un rang plus petit l'emporte en cas de desaccord"
+          },
+          "text": {
+            "type": "string"
+          },
+          "facts": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "uncitable": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "cles de facts qu'aucune citation ne peut invoquer"
+          },
+          "numeric": {
+            "type": "boolean",
+            "description": "false : ses chiffres ne sourcent aucun chiffre de la cible (lecture de photo)"
+          },
+          "citable": {
+            "type": "boolean",
+            "description": "false : connue des agents, mais aucune citation ne peut l'invoquer (prix, emballage, impression)"
+          },
+          "exclusive": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "valeurs mutuellement exclusives : une seule dans la cible, celle du nom s'il en porte une (hors-perimetre)"
+          }
+        }
+      }
     }
   }
-}
+}\n

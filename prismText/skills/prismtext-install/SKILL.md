@@ -49,7 +49,7 @@ Dans `.prismtext/adapters/<nom>/`. Pars de `<PRISMTEXT_HOME>/adapters/reference-
 - `preview` ne modifie jamais la source ;
 - aucune logique de reecriture dans un adaptateur.
 
-Puis `.prismtext/config.json`, conforme a `<PRISMTEXT_HOME>/contract/config.schema.json`, avec `gates.human_validation: true`.
+Puis `.prismtext/config.json`, conforme a `<PRISMTEXT_HOME>/contract/config.schema.json`, avec `gates.human_validation: true` (`false` seulement pour un flux automatique assume : la decision est alors `decide --auto`, conforme seulement).
 
 ## 5. Prouver le branchement
 

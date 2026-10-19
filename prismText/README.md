@@ -60,9 +60,9 @@ Trois rôles, trois contextes séparés :
 ```
 source --[adaptateur: extract]--> input.json (segments + page rendue + contexte projet)
 input + prisme --[brief]--> consigne --[rédacteur isolé]--> result-a.json
-input + result --[inverse-brief]--> consigne --[vérificateur isolé]--> inverse-a.json
+input + result --[inverse-brief --prism]--> consigne --[vérificateur isolé]--> inverse-a.json
 dossier de run --[check]--> en échec : brief écrit une consigne de correction, version archivée, on reprend
-dossier de run --[report, lot-report]--> rapport --[humain: decide]--> choix
+dossier de run --[report, lot-report]--> rapport --[humain: decide | pilote: decide --auto]--> choix
 variante choisie --[adaptateur: preview, apply, verify]--> source ; after_batch (commit, tag) ; publish sur accord
 ```
 

@@ -13,6 +13,28 @@
 
 import { stamp } from './prism.mjs';
 import { CONTRACT_VERSION } from './contract.mjs';
+import { references } from './checks.mjs';
+
+// References (nom, specs, lecture de photo...) par rang de confiance : le
+// redacteur s'en sert, le verificateur les cite (ref:<id>.<cle>).
+function referencesBlock(input, { forVerifier }) {
+  const refs = references(input);
+  if (!refs.length) return [];
+  const out = ['## References, par rang de confiance (1 = le plus sur)', ''];
+  out.push(forVerifier
+    ? 'Une citation de source peut etre un extrait litteral d une reference, ou `ref:<id>` (son texte), ou `ref:<id>.<cle>` (un fait). Un rang plus petit l emporte : une phrase appuyee sur une reference de rang N contredite par un rang inferieur a N est fautive. Une cle "non citable" ne source rien.'
+    : 'Ce que ces references disent peut entrer dans le texte ; une cle "non citable" ne doit pas y entrer. Un rang plus petit l emporte en cas de desaccord. Une valeur se recopie telle quelle.');
+  out.push('');
+  for (const r of refs) {
+    const flags = [r.numeric ? '' : 'ses chiffres ne sourcent rien', r.citable ? '' : 'non citable : connue, jamais rattachee a une phrase'].filter(Boolean);
+    out.push(`### ${r.id} (rang ${r.trust}${flags.length ? ', ' + flags.join(', ') : ''})${forVerifier && r.textCitable ? ` -> ref:${r.id}` : ''}`, '');
+    if (r.text !== null) out.push(r.text, '');
+    if (r.exclusive.length) out.push(`Valeurs exclusives (une seule vaut pour cet article, celle du nom s il en porte une) : ${r.exclusive.map((v) => `"${v}"`).join(', ')}`, '');
+    for (const f of r.facts) out.push(`- ${f.key} : ${f.value}${f.citable ? (forVerifier ? `  -> ref:${r.id}.${f.key}` : '') : '  (non citable)'}`);
+    if (r.facts.length) out.push('');
+  }
+  return out;
+}
 
 const CONTEXT_HIDDEN = new Set(['rendu', 'lengthTolerance']);
 
@@ -75,9 +97,12 @@ function contractRules(input) {
     for (const r of rules) out.push(`  - ${r.name} : /${r.regex}/${r.note ? ` (${r.note})` : ''}`);
   }
   if (ctx.conserver?.length) out.push(`- Elements a conserver mot pour mot : ${ctx.conserver.map((c) => `"${c}"`).join(', ')}`);
+  if (ctx.forbid?.length) out.push(`- Termes interdits dans tous les segments (quelle que soit la casse) : ${ctx.forbid.map((f) => `"${f}"`).join(', ')}`);
+  if (ctx.maxOccurrences && Object.keys(ctx.maxOccurrences).length) out.push(`- Nombre maximal d occurrences par segment : ${Object.entries(ctx.maxOccurrences).map(([w, n]) => `"${w}" ${n}`).join(', ')}`);
+  out.push('- Les contraintes propres a un segment (minChars, maxChars, forbid, maxOccurrences) sont affichees a cote de son id.');
   out.push('- Carte des concepts : pour chaque idee de chaque segment source, un objet { segment, concept, cible } ou "cible" est une citation EXACTE (copier-coller) du segment cible qui porte cette idee.');
   out.push('- Idee retiree parce qu une regle du prisme l exige : cible = null et "motif" cite la regle. Sans motif, c est une erreur bloquante. Un humain confirmera chaque retrait.');
-  out.push('- Tout ajout d idee absente de la source est declare dans "ajouts" : [{ segment, texte }]. Un verificateur independant relira chaque phrase de la cible pour lui trouver sa source : un ajout non declare bloque la variante.');
+  out.push('- Tout ajout d idee absente de la source est declare dans "ajouts" : [{ segment, texte, nature }]. nature = "enjolivement" (ambiance, usage, tournure : aucun chiffre, matiere, norme ni compatibilite) ou "fait" ; un ajout de nature "fait" est une erreur bloquante, un enjolivement est une alerte. Un verificateur independant relira chaque phrase de la cible pour lui trouver sa source : un ajout non declare bloque la variante.');
   out.push('');
   return out;
 }
@@ -93,7 +118,7 @@ function outputBlock(prism, input, variant) {
       variant,
       segments: [{ id: input.segments[0].id, text: '...' }],
       concepts: [{ segment: input.segments[0].id, concept: '...', cible: '...' }],
-      ajouts: [],
+      ajouts: [{ segment: input.segments[0].id, texte: '...', nature: 'enjolivement' }],
     }, null, 2),
     '```',
     '',
@@ -111,6 +136,7 @@ export function writeBrief({ prism, input, variant, out }) {
     prism.body,
     '',
     ...contextBlock(input),
+    ...referencesBlock(input, { forVerifier: false }),
     ...pageRendue(input),
     ...segmentsBlock(input),
     ...contractRules(input),
@@ -149,6 +175,7 @@ export function fixBrief({ prism, input, previous, issues, out }) {
     prism.body,
     '',
     ...contextBlock(input),
+    ...referencesBlock(input, { forVerifier: false }),
     ...pageRendue(input),
     ...segmentsBlock(input),
     ...contractRules(input),
@@ -156,21 +183,25 @@ export function fixBrief({ prism, input, previous, issues, out }) {
   ].join('\n');
 }
 
-export function inverseBrief({ input, result, out }) {
+export function inverseBrief({ input, result, out, prism = null }) {
   const dst = new Map(result.segments.map((s) => [s.id, s.text]));
+  const hasRefs = (input.references || []).length > 0;
   const lines = [
     `# Verification inverse PrismText : variante "${result.variant}" (${result.prism.id}@${result.prism.version})`,
     '',
     ...frame(out, 'Tu n as pas ecrit le texte cible : ton role est de le soupconner.'),
     '## Consigne',
     '',
-    'Pour chaque segment ci-dessous, decoupe le texte CIBLE en morceaux (propositions ou phrases) qui couvrent la totalite de la cible, et pour chacun donne la citation EXACTE (copier-coller) du texte SOURCE qui porte la meme idee.',
+    `Pour chaque segment ci-dessous, decoupe le texte CIBLE en morceaux (propositions ou phrases) qui couvrent la totalite de la cible, et pour chacun donne la citation EXACTE (copier-coller) du texte SOURCE${hasRefs ? ' ou d une reference' : ''} qui porte la meme idee.`,
     '',
     '- Si un morceau dit quelque chose que la source ne dit pas (engagement, precision, nuance, cause, promesse, interpretation, "je" devenu "nous"...), sa source vaut null. Ne rattache pas un ajout a une source vague pour le faire passer.',
     '- Une reformulation fidele n est pas un ajout.',
     '- "cible" et "source" sont des copier-coller exacts, sans guillemets ajoutes ni ponctuation modifiee.',
     '- Les segments inchanges ou geles sont omis.',
+    ...(prism?.verifier ? ['- Si un morceau viole une regle du prisme (section ci-dessous), ajoute "probleme" avec le code que la regle nomme : c est une erreur bloquante, meme si le morceau a une source.'] : []),
     '',
+    ...(prism?.verifier ? ['## Regles du prisme pour le verificateur', '', prism.verifier, ''] : []),
+    ...referencesBlock(input, { forVerifier: true }),
   ];
   for (const s of input.segments) {
     const d = dst.get(s.id);
@@ -178,7 +209,9 @@ export function inverseBrief({ input, result, out }) {
     lines.push(`## ${s.id}`, '', '**Source**', '', s.text, '', '**Cible**', '', d, '');
   }
   lines.push('## Sortie attendue', '', '```json');
-  lines.push(JSON.stringify({ inverse: [{ segment: '<id>', cible: '<citation exacte de la cible>', source: '<citation exacte de la source ou null>' }] }, null, 2));
+  const ex = { segment: '<id>', cible: '<citation exacte de la cible>', source: `<citation exacte de la source${hasRefs ? ', ref:<id>.<cle>,' : ''} ou null>` };
+  if (prism?.verifier) ex.probleme = '<code d une regle violee, sinon omis>';
+  lines.push(JSON.stringify({ inverse: [ex] }, null, 2));
   lines.push('```');
   return lines.join('\n');
 }

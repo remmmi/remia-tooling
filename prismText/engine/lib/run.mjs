@@ -15,7 +15,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { validateInput, validateResult, validateInverse } from './contract.mjs';
-import { loadPrism } from './prism.mjs';
+import { loadPrism, prismCheck } from './prism.mjs';
 import { check, checkRegression } from './checks.mjs';
 import { writeBrief, fixBrief, inverseBrief } from './briefs.mjs';
 
@@ -59,8 +59,9 @@ function resolvePrism(prismPath, result) {
 }
 
 // Controle complet d'une variante : bijection directe et inverse, tampon du
-// prisme, et garde-fou de correction contre la version precedente.
-export function runCheck(dir, v, prismPath) {
+// prisme et son module de controle, garde-fou de correction contre la
+// version precedente.
+export async function runCheck(dir, v, prismPath) {
   const input = loadRunInput(dir);
   const rp = join(dir, `result-${v}.json`);
   if (!existsSync(rp)) throw new RunError(`${dir} : pas de result-${v}.json (redaction non faite)`, 1);
@@ -84,6 +85,11 @@ export function runCheck(dir, v, prismPath) {
   if (pr?.mismatch) {
     res.issues.unshift({ level: 'error', segment: '*', code: 'tampon-prisme', msg: pr.mismatch });
     res.errors += 1;
+  } else if (pr) {
+    const extra = await prismCheck(pr.prism, input, result);
+    res.issues.push(...extra);
+    res.errors += extra.filter((i) => i.level === 'error').length;
+    res.warnings += extra.filter((i) => i.level !== 'error').length;
   }
   res.ok = res.errors === 0;
   res.variant = v;
@@ -94,7 +100,7 @@ export function runCheck(dir, v, prismPath) {
 
 // Consigne de redaction, ou de correction si une variante non conforme existe.
 // Retourne { path, kind, out }.
-export function runBrief(dir, v, prismPath) {
+export async function runBrief(dir, v, prismPath) {
   const input = loadRunInput(dir);
   const prism = loadPrism(prismPath);
   const rp = join(dir, `result-${v}.json`);
@@ -103,7 +109,7 @@ export function runBrief(dir, v, prismPath) {
     writeFileSync(bp, writeBrief({ prism, input, variant: v, out: rp }));
     return { path: bp, kind: 'redaction', out: rp };
   }
-  const res = runCheck(dir, v, prismPath);
+  const res = await runCheck(dir, v, prismPath);
   if (res.ok) throw new RunError(`variante ${v} deja conforme : rien a corriger`, 1);
   const previous = loadRunResult(rp);
   const n = versions(dir, v).length + 1;
@@ -114,22 +120,31 @@ export function runBrief(dir, v, prismPath) {
   return { path: bp, kind: `correction ${n}`, out: rp };
 }
 
-export function runInverseBrief(dir, v) {
+// Avec le prisme, la consigne du verificateur recoit sa section VERIFICATEUR.
+export function runInverseBrief(dir, v, prismPath) {
   const input = loadRunInput(dir);
   const rp = join(dir, `result-${v}.json`);
   if (!existsSync(rp)) throw new RunError(`${dir} : pas de result-${v}.json`, 1);
+  const result = loadRunResult(rp);
+  const pr = resolvePrism(prismPath, result);
+  if (pr?.mismatch) throw new RunError(pr.mismatch, 1);
   const out = join(dir, `inverse-${v}.json`);
   const bp = join(dir, `inverse-brief-${v}.md`);
-  writeFileSync(bp, inverseBrief({ input, result: loadRunResult(rp), out }));
+  writeFileSync(bp, inverseBrief({ input, result, out, prism: pr?.prism || null }));
   return { path: bp, out };
 }
 
-export function runDecide(dir, choix, { par = 'humain', force = false } = {}) {
+// Decision : humaine par defaut. `auto` (gates.human_validation false dans la
+// config du projet) n'accepte qu'une variante conforme et ne force jamais :
+// la trace reste dans decision.json (par: "auto") et dans les rapports.
+export async function runDecide(dir, choix, { par = 'humain', force = false, auto = false, prismPath } = {}) {
+  if (auto && force) throw new RunError('--auto ne force jamais une variante non conforme');
   if (choix !== 'aucune') {
-    const res = runCheck(dir, choix);
+    const res = await runCheck(dir, choix, prismPath);
     if (!res.ok && !force) throw new RunError(`variante ${choix} non conforme (${res.errors} erreur(s)) : la choisir quand meme demande --force, sur demande explicite de l humain`, 1);
   }
-  writeFileSync(join(dir, 'decision.json'), JSON.stringify({ choix, par, le: new Date().toISOString(), ...(force ? { force: true } : {}) }, null, 2) + '\n');
+  const dec = { choix, par: auto ? 'auto' : par, le: new Date().toISOString(), ...(auto ? { auto: true } : {}), ...(force ? { force: true } : {}) };
+  writeFileSync(join(dir, 'decision.json'), JSON.stringify(dec, null, 2) + '\n');
 }
 
 export function runApplied(dir, v) {

@@ -73,9 +73,15 @@ commandes et les codes de sortie.
 - Une idee retiree par le prisme avec motif n'est jamais retablie par une
   boucle de correction : `check --previous` le bloque (`retrait-annule`).
   Retablir est une decision humaine, prise a la relecture du rapport.
-- Rien ne s'applique a une source sans validation humaine
-  (`gates.human_validation`) : `applied` refuse une variante sans
-  `decision.json`, ou differente de celle choisie.
+- Rien ne s'applique a une source sans decision enregistree : `applied`
+  refuse une variante sans `decision.json`, ou differente de celle choisie.
+  Humaine par defaut (`gates.human_validation: true`) ; un flux automatique
+  assume (`false`) passe par `decide --auto`, qui n'accepte qu'une variante
+  conforme et ne force jamais, et laisse `par: "auto"` dans la trace.
+- Les references (`input.references`, nom, specs, lecture de photo, avec un
+  rang de confiance) sont de la matiere citable ; ce qu'on en fait (hierarchie,
+  emballage, imitation) est ecrit dans le prisme : section `VERIFICATEUR` pour
+  le verificateur, module `check:` deterministe tamponne avec le prisme.
 - Mode lot : un dossier par source, etat lu sur le disque (`lot-status`),
   donc un lot interrompu reprend la ou il s'est arrete. Les commandes
   d'adaptateur `before_batch` et `after_batch` ne font rien de sortant ;

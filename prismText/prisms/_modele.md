@@ -22,5 +22,11 @@ SORTIE
 Le format de sortie est fixe par le contrat PrismText : il remplace toute
 autre consigne de forme.
 
+VERIFICATEUR
+
+(Optionnel.) Regles de jugement pour le verificateur inverse, chacune avec
+le code a poser dans "probleme" quand elle est violee. Un module de controle
+deterministe peut etre declare dans le frontmatter : check: <prisme>.check.mjs
+
 Versionnage : toute modification du corps change l'empreinte SHA-256 tamponnee
 dans les results. Monter la version (semver) a chaque changement de fond.

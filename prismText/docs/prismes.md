@@ -39,6 +39,18 @@ virgule, change l'empreinte ; monter la version si le fond change.
   témoignages, délais ou résultats absents de la source, et le moteur le vérifie pour les
   chiffres et les noms propres.
 
+## Section `VERIFICATEUR` et module de contrôle
+
+Le corps peut contenir une ligne `VERIFICATEUR` seule : ce qui précède va au rédacteur, ce qui
+suit va au vérificateur inverse (`inverse-brief --prism`). On y écrit les règles de jugement que
+le moteur ne sait pas vérifier (hiérarchie des références, emballage, imitation de matière), chacune
+avec le code que le vérificateur pose dans `probleme` quand elle est violée.
+
+Le frontmatter peut nommer un module de contrôle déterministe : `check: mon-prisme.check.mjs`
+(chemin relatif au prisme). Il exporte `check({ input, result })` et rend des issues
+`{ level, segment, code, msg }` ; `check --prism` l'exécute après les contrôles du contrat. Le
+module entre dans l'empreinte SHA-256 du prisme : le changer change la version.
+
 ## Enchaîner des prismes
 
 `config.chains` déclare des suites (`"site": ["copywriter-b2b", "noia"]`). `prismtext chain`

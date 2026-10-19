@@ -84,6 +84,14 @@
           },
           "texte": {
             "type": "string"
+          },
+          "nature": {
+            "type": "string",
+            "enum": [
+              "enjolivement",
+              "fait"
+            ],
+            "description": "enjolivement : alerte, acceptee en mode auto ; fait : erreur ajout-fait"
           }
         }
       }
@@ -109,10 +117,16 @@
             "type": [
               "string",
               "null"
-            ]
+            ],
+            "description": "citation exacte de la source, extrait d'une reference, ref:<id>, ref:<id>.<cle>, ou null"
+          },
+          "probleme": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+$",
+            "description": "code d'une regle du prisme (section VERIFICATEUR) que le verificateur declare violee : erreur portant ce code"
           }
         }
       }
     }
   }
-}
+}\n

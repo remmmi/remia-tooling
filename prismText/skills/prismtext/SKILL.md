@@ -54,7 +54,7 @@ Une seule ref = un lot d'un item : meme deroule.
    puis un agent isole sur la consigne affichee. Items en parallele, par vagues de 5 agents.
 6. **Verifier.** Pour chaque variante ecrite :
    ```bash
-   $PT inverse-brief $LOT/<slug> --variant a
+   $PT inverse-brief $LOT/<slug> --variant a --prism <prisme.md>
    ```
    puis un **autre** agent isole sur cette consigne.
 7. **Controler.**
@@ -69,7 +69,7 @@ Une seule ref = un lot d'un item : meme deroule.
    $PT lot-report $LOT --out $LOT/rapport-lot.md
    ```
    `<preview>` pour chaque variante si l'adaptateur en a une.
-9. **Validation humaine.** Montre le tableau de `lot-report` (pas les textes), le chemin de `rapport-lot.md` et des rapports par item, et les chemins de preview. AskUserQuestion : "Appliquer tous les items conformes", "Je choisis item par item" (l'utilisateur repond dans le chat), "Ne rien appliquer". Enregistre chaque choix : `$PT decide $LOT/<slug> <a|aucune>`. `decide` refuse une variante non conforme ; `--force` seulement si l'humain le demande explicitement pour cet item.
+9. **Validation humaine.** Montre le tableau de `lot-report` (pas les textes), le chemin de `rapport-lot.md` et des rapports par item, et les chemins de preview. AskUserQuestion : "Appliquer tous les items conformes", "Je choisis item par item" (l'utilisateur repond dans le chat), "Ne rien appliquer". Enregistre chaque choix : `$PT decide $LOT/<slug> <a|aucune>`. `decide` refuse une variante non conforme ; `--force` seulement si l'humain le demande explicitement pour cet item. Si `gates.human_validation` est `false` dans la config : pas de question, `$PT decide $LOT/<slug> a --auto --prism <prisme.md>` sur chaque item conforme (refuse sinon), et le rapport de lot reste la trace a montrer.
 10. **Appliquer** chaque item decide : `<apply>`, `<verify>`, puis `$PT applied $LOT/<slug> a` (refuse sans decision humaine).
 11. **Apres.** `<after_batch>` avec `{lot}` et `{lotdir}` : rien de sortant.
 12. **Publier** seulement sur accord explicite (AskUserQuestion) : `<publish>`.

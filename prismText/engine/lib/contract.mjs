@@ -12,6 +12,46 @@ function isObj(v) {
   return v !== null && typeof v === 'object' && !Array.isArray(v);
 }
 
+// forbid (termes interdits) et maxOccurrences (mot -> nombre maximal) valent
+// au niveau du contexte (tous les segments) ou d'un segment (constraints).
+function validateLexical(errors, path, o) {
+  if (o.forbid !== undefined && !(Array.isArray(o.forbid) && o.forbid.every((f) => typeof f === 'string' && f))) {
+    err(errors, `${path}.forbid`, 'tableau de chaines non vides attendu');
+  }
+  if (o.maxOccurrences !== undefined && !(isObj(o.maxOccurrences) && Object.values(o.maxOccurrences).every((n) => Number.isInteger(n) && n >= 0))) {
+    err(errors, `${path}.maxOccurrences`, 'objet { mot: entier >= 0 } attendu');
+  }
+  if (o.forbidPatterns !== undefined) {
+    if (!Array.isArray(o.forbidPatterns)) err(errors, `${path}.forbidPatterns`, 'tableau de regex attendu');
+    else o.forbidPatterns.forEach((p, i) => { try { new RegExp(p, 'giu'); } catch (e) { err(errors, `${path}.forbidPatterns.${i}`, e.message); } });
+  }
+}
+
+// References : matiere annexe a la source (nom, specs, lecture de photo...),
+// chacune avec un rang de confiance (1 = le plus sur). `text` ou `facts`
+// (cles -> valeurs texte). `numeric: false` : ses chiffres ne sourcent rien.
+// `citable: false` : connue du redacteur et du verificateur, mais aucune
+// phrase ne peut s y rattacher ; `uncitable` : memes effet, cle par cle.
+// `exclusive` : valeurs mutuellement exclusives (tailles, coloris...) dont
+// une seule peut figurer dans la cible.
+function validateReferences(errors, refs) {
+  if (!Array.isArray(refs)) return err(errors, 'references', 'tableau attendu');
+  const seen = new Set();
+  refs.forEach((r, i) => {
+    const p = `references.${i}`;
+    if (!isObj(r)) return err(errors, p, 'objet attendu');
+    if (typeof r.id !== 'string' || !/^[a-zA-Z0-9_-]+$/.test(r.id)) err(errors, `${p}.id`, 'identifiant attendu (lettres, chiffres, - _)');
+    else if (seen.has(r.id)) err(errors, `${p}.id`, `identifiant en double "${r.id}"`);
+    else seen.add(r.id);
+    if (!Number.isInteger(r.trust) || r.trust < 1) err(errors, `${p}.trust`, 'entier >= 1 attendu (1 = le plus sur)');
+    const hasText = typeof r.text === 'string';
+    const hasFacts = isObj(r.facts) && Object.values(r.facts).every((v) => typeof v === 'string');
+    if (!hasText && !hasFacts) err(errors, p, '"text" (chaine) ou "facts" (objet cle -> chaine) attendu');
+    for (const k of ['numeric', 'citable']) if (r[k] !== undefined && typeof r[k] !== 'boolean') err(errors, `${p}.${k}`, 'booleen attendu');
+    for (const k of ['uncitable', 'exclusive']) if (r[k] !== undefined && !(Array.isArray(r[k]) && r[k].every((v) => typeof v === 'string' && v))) err(errors, `${p}.${k}`, 'tableau de chaines attendu');
+  });
+}
+
 export function validateInput(doc) {
   const errors = [];
   if (!isObj(doc)) return ['(racine) : objet attendu'];
@@ -22,6 +62,8 @@ export function validateInput(doc) {
     if (typeof doc.source.ref !== 'string') err(errors, 'source.ref', 'chaine attendue');
   }
   if (doc.context !== undefined && !isObj(doc.context)) err(errors, 'context', 'objet attendu');
+  else if (doc.context) validateLexical(errors, 'context', doc.context);
+  if (doc.references !== undefined) validateReferences(errors, doc.references);
   if (doc.protect !== undefined) {
     if (!Array.isArray(doc.protect)) err(errors, 'protect', 'tableau attendu');
     else doc.protect.forEach((r, i) => {
@@ -44,6 +86,7 @@ export function validateInput(doc) {
       else seen.add(s.id);
       if (typeof s.text !== 'string') err(errors, `${p}.text`, 'chaine attendue');
       if (s.constraints !== undefined && !isObj(s.constraints)) err(errors, `${p}.constraints`, 'objet attendu');
+      else if (s.constraints) validateLexical(errors, `${p}.constraints`, s.constraints);
     });
   }
   return errors;
@@ -70,6 +113,10 @@ export function validateResult(doc) {
     }
   });
   if (doc.ajouts !== undefined && !Array.isArray(doc.ajouts)) err(errors, 'ajouts', 'tableau attendu');
+  else (doc.ajouts || []).forEach((a, i) => {
+    if (!isObj(a) || typeof a.segment !== 'string') err(errors, `ajouts.${i}`, 'objet { segment, texte, nature? } attendu');
+    else if (a.nature !== undefined && !['enjolivement', 'fait'].includes(a.nature)) err(errors, `ajouts.${i}.nature`, '"enjolivement" ou "fait" attendu');
+  });
   if (doc.inverse !== undefined) errors.push(...validateInverse(doc.inverse, 'inverse'));
   return errors;
 }
@@ -84,6 +131,8 @@ export function validateInverse(inv, path = 'inverse') {
       err(errors, `${path}.${i}`, 'objet { segment, cible, source } attendu');
     } else if (e.source !== null && typeof e.source !== 'string') {
       err(errors, `${path}.${i}.source`, 'chaine (citation exacte de la source) ou null attendu');
+    } else if (e.probleme !== undefined && !(typeof e.probleme === 'string' && /^[a-z0-9-]+$/.test(e.probleme))) {
+      err(errors, `${path}.${i}.probleme`, 'code en minuscules-tirets attendu (regle du prisme violee)');
     }
   });
   return errors;

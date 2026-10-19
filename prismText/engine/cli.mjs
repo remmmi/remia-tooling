@@ -18,7 +18,7 @@ import { readFileSync, writeFileSync, mkdirSync, existsSync, readdirSync } from 
 import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateInput, validateResult, validateInverse, CONTRACT_VERSION } from './lib/contract.mjs';
-import { loadPrism } from './lib/prism.mjs';
+import { loadPrism, prismCheck } from './lib/prism.mjs';
 import { check, checkRegression } from './lib/checks.mjs';
 import { report } from './lib/report.mjs';
 import { createLot, lotStatus, lotReport } from './lib/lot.mjs';
@@ -32,8 +32,8 @@ function die(msg, code = 2) {
   process.exit(code);
 }
 
-function guard(fn) {
-  try { return fn(); } catch (e) { die(e.message, e instanceof RunError ? e.code : 2); }
+async function guard(fn) {
+  try { return await fn(); } catch (e) { die(e.message, e instanceof RunError ? e.code : 2); }
 }
 
 function readJson(path) {
@@ -93,14 +93,14 @@ const MANIFEST = {
     prism: 'prism <prism.md> : metadonnees et tampon SHA-256 du prisme',
     run: 'run <base-dir> : cree un dossier de run horodate et affiche son chemin absolu',
     brief: 'brief <prism.md> <run-dir> [--variant a] : ecrit la consigne de redaction, ou de correction si la variante echoue au controle ; affiche son chemin et le fichier que l agent doit ecrire',
-    'inverse-brief': 'inverse-brief <run-dir> [--variant a] : ecrit la consigne du verificateur ; affiche son chemin',
-    check: 'check <run-dir> [--variant a] [--prism <prism.md>] [--json] | check <input.json> <result.json> [--inverse <f>] [--previous <f>] [--prism <f>] [--json]',
+    'inverse-brief': 'inverse-brief <run-dir> [--variant a] [--prism <prism.md>] : ecrit la consigne du verificateur (avec la section VERIFICATEUR du prisme si fourni) ; affiche son chemin',
+    check: 'check <run-dir> [--variant a] [--prism <prism.md>] [--json] : bijection, tampon et module de controle du prisme | check <input.json> <result.json> [--inverse <f>] [--previous <f>] [--prism <f>] [--json]',
     report: 'report <run-dir> [--out rapport.md] : variantes cote a cote et decisions',
     chain: 'chain <run-dir> <variante> <nouveau-run-dir> : input de l etape suivante d une chaine de prismes',
     lot: 'lot <base-dir> <nom> <ref>... : cree un lot (un dossier de run par item) et affiche son chemin absolu',
     'lot-status': 'lot-status <lot-dir> [--json] : etape atteinte par chaque item (reprise d un lot interrompu)',
     'lot-report': 'lot-report <lot-dir> [--out rapport.md] : rapport consolide du lot',
-    decide: 'decide <run-dir> <variante|aucune> [--par <qui>] [--force] : decision humaine (--force pour une variante non conforme, sur demande explicite)',
+    decide: 'decide <run-dir> <variante|aucune> [--par <qui>] [--force] [--auto] : decision humaine (--force pour une variante non conforme, sur demande explicite) ; --auto quand gates.human_validation est false : conforme seulement, jamais forcee',
     applied: 'applied <run-dir> <variante> : enregistre l application ; refuse sans decision humaine',
     selftest: 'selftest : rejoue les cas de reference du depot',
   },
@@ -123,7 +123,7 @@ function printCheck(res, asJson) {
   console.log(`${res.ok ? '[OK]' : '[FAIL]'} ${res.errors} erreur(s), ${res.warnings} alerte(s)`);
 }
 
-function fileCheck(args, asJson) {
+async function fileCheck(args, asJson) {
   const prismPath = flag(args, '--prism');
   const inversePath = flag(args, '--inverse');
   const previousPath = flag(args, '--previous');
@@ -143,10 +143,15 @@ function fileCheck(args, asJson) {
     res.errors += reg.length;
   }
   if (prismPath) {
-    const p = guard(() => loadPrism(prismPath));
+    const p = await guard(() => loadPrism(prismPath));
     if (p.sha256 !== result.prism.sha256 || p.id !== result.prism.id || p.version !== result.prism.version) {
       res.issues.unshift({ level: 'error', segment: '*', code: 'tampon-prisme', msg: `result tamponne ${result.prism.id}@${result.prism.version} (${result.prism.sha256.slice(0, 8)}), prisme fourni ${p.id}@${p.version} (${p.sha256.slice(0, 8)})` });
       res.errors += 1;
+    } else {
+      const extra = await guard(() => prismCheck(p, input, result));
+      res.issues.push(...extra);
+      res.errors += extra.filter((i) => i.level === 'error').length;
+      res.warnings += extra.filter((i) => i.level !== 'error').length;
     }
   }
   res.ok = res.errors === 0;
@@ -158,7 +163,7 @@ function runResults(dir) {
   return readdirSync(dir).map((f) => f.match(/^result-([a-z0-9]+)\.json$/)?.[1]).filter(Boolean).sort();
 }
 
-function main() {
+async function main() {
   const args = process.argv.slice(2);
   const cmd = args.shift();
   switch (cmd) {
@@ -177,7 +182,7 @@ function main() {
 
     case 'prism': {
       if (!args[0]) die('usage : prism <prism.md>');
-      const { body, ...meta } = guard(() => loadPrism(args[0]));
+      const { body, verifier, ...meta } = await guard(() => loadPrism(args[0]));
       return console.log(JSON.stringify(meta, null, 2));
     }
 
@@ -192,14 +197,15 @@ function main() {
     case 'brief': {
       const v = flag(args, '--variant') || 'a';
       if (args.length < 2) die('usage : brief <prism.md> <run-dir> [--variant a]');
-      const b = guard(() => runBrief(args[1], v, args[0]));
+      const b = await guard(() => runBrief(args[1], v, args[0]));
       return console.log(`${b.kind} : ${resolve(b.path)}\necrit par l agent : ${resolve(b.out)}`);
     }
 
     case 'inverse-brief': {
       const v = flag(args, '--variant') || 'a';
-      if (!args[0]) die('usage : inverse-brief <run-dir> [--variant a]');
-      const b = guard(() => runInverseBrief(args[0], v));
+      const prismPath = flag(args, '--prism');
+      if (!args[0]) die('usage : inverse-brief <run-dir> [--variant a] [--prism <prism.md>]');
+      const b = await guard(() => runInverseBrief(args[0], v, prismPath));
       return console.log(`verification : ${resolve(b.path)}\necrit par l agent : ${resolve(b.out)}`);
     }
 
@@ -208,11 +214,11 @@ function main() {
       if (!args[0]) die('usage : check <run-dir> [--variant a] [--prism <prism.md>] | check <input.json> <result.json> [...]');
       if (!isDir(args[0])) {
         if (args.length < 2) die('usage : check <input.json> <result.json> [--inverse <f>] [--previous <f>] [--prism <f>]');
-        return fileCheck(args, asJson);
+        return await fileCheck(args, asJson);
       }
       const v = flag(args, '--variant') || 'a';
       const prismPath = flag(args, '--prism');
-      const res = guard(() => runCheck(args[0], v, prismPath));
+      const res = await guard(() => runCheck(args[0], v, prismPath));
       printCheck(res, asJson);
       return process.exit(res.ok ? 0 : 1);
     }
@@ -220,7 +226,7 @@ function main() {
     case 'report': {
       const outPath = flag(args, '--out');
       if (!args[0] || !isDir(args[0])) die('usage : report <run-dir> [--out rapport.md]');
-      const input = guard(() => loadRunInput(args[0]));
+      const input = await guard(() => loadRunInput(args[0]));
       const results = runResults(args[0]).map((v) => {
         const r = loadResult(join(args[0], `result-${v}.json`));
         const ip = join(args[0], `inverse-${v}.json`);
@@ -236,9 +242,9 @@ function main() {
     case 'chain': {
       if (args.length < 3) die('usage : chain <run-dir> <variante> <nouveau-run-dir>');
       const [dir, v, next] = args;
-      const res = guard(() => runCheck(dir, v));
+      const res = await guard(() => runCheck(dir, v));
       if (!res.ok) { printCheck(res, false); die('chainage refuse : la variante n est pas conforme', 1); }
-      const input = guard(() => loadRunInput(dir));
+      const input = await guard(() => loadRunInput(dir));
       const result = loadResult(join(dir, `result-${v}.json`));
       const texts = new Map(result.segments.map((s) => [s.id, s.text]));
       mkdirSync(next, { recursive: true });
@@ -252,13 +258,13 @@ function main() {
 
     case 'lot': {
       if (args.length < 3) die('usage : lot <base-dir> <nom> <ref>...');
-      return console.log(resolve(guard(() => createLot(args[0], args[1], args.slice(2)))));
+      return console.log(resolve(await guard(() => createLot(args[0], args[1], args.slice(2)))));
     }
 
     case 'lot-status': {
       const asJson = has(args, '--json');
       if (!args[0]) die('usage : lot-status <lot-dir> [--json]');
-      const st = guard(() => lotStatus(args[0]));
+      const st = await guard(() => lotStatus(args[0]));
       if (asJson) {
         for (const s of st.sources) for (const c of s.checks) delete c.issues;
         return console.log(JSON.stringify(st, null, 2));
@@ -273,7 +279,7 @@ function main() {
     case 'lot-report': {
       const outPath = flag(args, '--out');
       if (!args[0]) die('usage : lot-report <lot-dir> [--out rapport.md]');
-      const md = guard(() => lotReport(args[0]));
+      const md = await guard(() => lotReport(args[0]));
       if (outPath) { writeFileSync(outPath, md); return console.log(`[OK] rapport de lot ecrit : ${resolve(outPath)}`); }
       return console.log(md);
     }
@@ -281,14 +287,16 @@ function main() {
     case 'decide': {
       const par = flag(args, '--par') || 'humain';
       const force = has(args, '--force');
-      if (args.length < 2) die('usage : decide <run-dir> <variante|aucune> [--par <qui>] [--force]');
-      guard(() => runDecide(args[0], args[1], { par, force }));
+      const auto = has(args, '--auto');
+      const prismPath = flag(args, '--prism');
+      if (args.length < 2) die('usage : decide <run-dir> <variante|aucune> [--par <qui>] [--force] [--auto] [--prism <prism.md>]');
+      await guard(() => runDecide(args[0], args[1], { par, force, auto, prismPath }));
       return console.log(`[OK] decision ${args[1]} enregistree dans ${args[0]}`);
     }
 
     case 'applied': {
       if (args.length < 2) die('usage : applied <run-dir> <variante>');
-      guard(() => runApplied(args[0], args[1]));
+      await guard(() => runApplied(args[0], args[1]));
       return console.log(`[OK] variante ${args[1]} marquee appliquee`);
     }
 
@@ -310,4 +318,4 @@ function main() {
   }
 }
 
-main();
+await main();

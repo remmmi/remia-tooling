@@ -27,7 +27,7 @@
       "properties": {
         "human_validation": {
           "type": "boolean",
-          "description": "toujours true en production : aucun apply sans choix humain"
+          "description": "true : aucun apply sans choix humain (decide). false : le pilote enregistre la decision par `decide --auto`, acceptee seulement sur check vert, jamais forcee ; decision.json porte par: auto et les rapports restent la trace consultable"
         },
         "max_fix_rounds": {
           "type": "integer",
