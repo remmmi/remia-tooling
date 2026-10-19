@@ -43,6 +43,9 @@ Un input = **un item entier** (une page, une fiche, un email), jamais un fragmen
   (regex, erreur `motif-interdit`), `maxOccurrences` (`{ "montagne": 1 }`, mot entier, erreur
   `occurrences-max`), `constraints.minChars` (erreur `longueur-min`).
 
+Un prisme peut exiger certaines références et certains segments (`requires` dans son
+frontmatter, voir `docs/prismes.md`) : `brief` refuse un input qui ne les porte pas.
+
 ### `references` : la matière annexe, par rang de confiance
 
 Un texte se réécrit à partir de sa source, mais une fiche produit s'appuie aussi sur un nom, des

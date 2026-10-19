@@ -39,6 +39,25 @@ virgule, change l'empreinte ; monter la version si le fond change.
   témoignages, délais ou résultats absents de la source, et le moteur le vérifie pour les
   chiffres et les noms propres.
 
+## Contrats d'entrée et de sortie : `requires` et `produces`
+
+Un prisme branché entre un générateur d'entrées (adaptateur, harnais, script) et un dispatcheur
+de sorties (base, CMS, fichier) porte lui-même ce qu'il attend et ce qu'il rend, dans le
+frontmatter :
+
+```
+requires: references name(trust 1, text), specs(trust 1, facts), vision(trust 3, facts) ; segments description
+produces: description = prose, 2 a 3 paragraphes, <strong> seul balisage ; resume = texte nu, 120 a 155 caracteres
+```
+
+- `requires` : références (id, et en option `trust N`, `text` ou `facts`) et segments que
+  l'input doit porter. `prismtext brief` refuse (exit 2) un input incomplet, en nommant le
+  manque ; l'amont sait donc exactement quoi produire.
+- `produces` : pour chaque segment rendu, le format en clair ; c'est la promesse faite à l'aval.
+  Le moteur ne l'interprète pas, le module `check` du prisme le fait respecter.
+- `prismtext prism <fichier>` affiche les deux (JSON) ; les deux sont optionnels, un prisme sans
+  contrat accepte tout input valide.
+
 ## Section `VERIFICATEUR` et module de contrôle
 
 Le corps peut contenir une ligne `VERIFICATEUR` seule : ce qui précède va au rédacteur, ce qui

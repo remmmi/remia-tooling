@@ -461,3 +461,39 @@ test('ajouts : nature "fait" = erreur, "enjolivement" = alerte, autre nature = c
   r.ajouts[0].nature = 'autre';
   assert.ok(validateResult(r).some((e) => e.includes('ajouts.0.nature')));
 });
+
+// Contrats portes par le prisme : ce qu il attend de l input (requires) et
+// ce qu il produit (produces), lisibles par l amont et l aval du moteur.
+test('prisme : requires / produces lus, affiches, et brief refuse un input incomplet', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prismtext-run-'));
+  const prismPath = join(dir, 'p.md');
+  writeFileSync(prismPath, [
+    '---', 'id: p', 'version: 1.0.0', 'description: test',
+    'requires: references name(trust 1, text), specs(trust 1, facts) ; segments description',
+    'produces: description = prose, 2 a 3 paragraphes, <strong> seul balisage',
+    '---', 'ROLE', '',
+  ].join('\n'));
+  const p = loadPrism(prismPath);
+  assert.deepEqual(p.requires.references.map((r) => r.id), ['name', 'specs']);
+  assert.equal(p.requires.references[1].trust, 1);
+  assert.equal(p.requires.references[1].kind, 'facts');
+  assert.deepEqual(p.requires.segments, ['description']);
+  assert.equal(p.produces[0].segment, 'description');
+  assert.match(p.produces[0].format, /prose/);
+  const out = execFileSync('node', [CLI, 'prism', prismPath], { encoding: 'utf8' });
+  assert.match(out, /"requires"/);
+  assert.match(out, /"produces"/);
+  const i2 = withRefs();
+  i2.references = i2.references.filter((r) => r.id !== 'specs');
+  writeFileSync(join(dir, 'input.json'), JSON.stringify(i2));
+  const r = spawnSync('node', [CLI, 'brief', prismPath, dir], { encoding: 'utf8' });
+  assert.equal(r.status, 2, r.stderr);
+  assert.match(r.stderr, /specs/);
+  i2.references = withRefs().references;
+  writeFileSync(join(dir, 'input.json'), JSON.stringify(i2));
+  assert.equal(spawnSync('node', [CLI, 'brief', prismPath, dir]).status, 2, 'segment description absent');
+  i2.segments[0].id = 'description';
+  writeFileSync(join(dir, 'input.json'), JSON.stringify(i2));
+  assert.equal(spawnSync('node', [CLI, 'brief', prismPath, dir]).status, 0);
+  assert.equal(loadPrism(PRISM).requires, null, 'contrat optionnel : copywriter-b2b n en declare pas');
+});

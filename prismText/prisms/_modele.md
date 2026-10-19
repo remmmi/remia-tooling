@@ -3,6 +3,8 @@ id: nom-du-prisme
 version: 1.0.0
 description: Une phrase - ce que ce prisme change dans un texte
 entrees: public, support, objectif, voix, longueur, conserver
+requires: references nom(trust 1, text) ; segments corps
+produces: corps = prose, <strong> seul balisage
 ---
 ROLE
 
@@ -27,6 +29,11 @@ VERIFICATEUR
 (Optionnel.) Regles de jugement pour le verificateur inverse, chacune avec
 le code a poser dans "probleme" quand elle est violee. Un module de controle
 deterministe peut etre declare dans le frontmatter : check: <prisme>.check.mjs
+
+Contrats (optionnels, frontmatter) : `requires` dit ce que l input doit
+porter (references avec rang et kind, segments) et `brief` refuse un input
+incomplet ; `produces` dit ce que le prisme rend (segment = format), pour le
+dispatcheur en aval. Les deux lignes ci-dessus sont des exemples a adapter.
 
 Versionnage : toute modification du corps change l'empreinte SHA-256 tamponnee
 dans les results. Monter la version (semver) a chaque changement de fond.

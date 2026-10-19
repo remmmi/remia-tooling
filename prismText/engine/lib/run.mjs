@@ -15,7 +15,7 @@
 import { readFileSync, writeFileSync, existsSync, readdirSync, renameSync } from 'node:fs';
 import { join } from 'node:path';
 import { validateInput, validateResult, validateInverse } from './contract.mjs';
-import { loadPrism, prismCheck } from './prism.mjs';
+import { loadPrism, prismCheck, missingRequirements } from './prism.mjs';
 import { check, checkRegression } from './checks.mjs';
 import { writeBrief, fixBrief, inverseBrief } from './briefs.mjs';
 
@@ -103,6 +103,8 @@ export async function runCheck(dir, v, prismPath) {
 export async function runBrief(dir, v, prismPath) {
   const input = loadRunInput(dir);
   const prism = loadPrism(prismPath);
+  const missing = missingRequirements(prism, input);
+  if (missing.length) throw new RunError(`input ne satisfait pas le contrat d entree du prisme ${prism.id}@${prism.version} :\n  - ${missing.join('\n  - ')}`);
   const rp = join(dir, `result-${v}.json`);
   const bp = join(dir, `brief-${v}.md`);
   if (!existsSync(rp)) {

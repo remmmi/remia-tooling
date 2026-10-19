@@ -8,6 +8,12 @@
 // frontmatter peut nommer un module de controle (`check: <fichier>.mjs`,
 // relatif au prisme) : il exporte check({ input, result }) et rend des issues
 // { level, segment, code, msg } ; il entre dans l'empreinte du prisme.
+//
+// Contrats portes par le prisme, lisibles par l'amont (generateur d'input)
+// et l'aval (dispatcheur des textes), optionnels :
+//   requires: references name(trust 1, text), specs(trust 1, facts) ; segments description
+//   produces: description = prose, 2 a 3 paragraphes, <strong> seul balisage ; autre = texte nu
+// `brief` refuse un input qui ne porte pas une reference ou un segment requis.
 
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
@@ -35,6 +41,8 @@ export function loadPrism(path) {
     hash.update('\n--- check ---\n').update(mod);
   }
   const [body, verifier] = m[2].trim().split(/^VERIFICATEUR\s*$/mu);
+  const requires = meta.requires ? parseRequires(meta.requires, path) : null;
+  const produces = meta.produces ? parseProduces(meta.produces) : null;
   return {
     id: meta.id,
     version: meta.version,
@@ -42,10 +50,63 @@ export function loadPrism(path) {
     entrees: meta.entrees ? meta.entrees.split(',').map((s) => s.trim()).filter(Boolean) : [],
     body: body.trim(),
     verifier: verifier ? verifier.trim() : null,
+    requires,
+    produces,
     check,
     sha256: hash.digest('hex'),
     path,
   };
+}
+
+// "references a(trust 1, text), b(facts) ; segments x, y"
+function parseRequires(src, path) {
+  const out = { references: [], segments: [] };
+  for (const part of src.split(';')) {
+    const m = part.trim().match(/^(references|segments)\s+(.*)$/s);
+    if (!m) throw new Error(`${path} : requires illisible : "${part.trim()}"`);
+    for (const item of m[2].split(/,(?![^(]*\))/)) {
+      const t = item.trim();
+      if (!t) continue;
+      if (m[1] === 'segments') { out.segments.push(t); continue; }
+      const r = t.match(/^([a-zA-Z0-9_-]+)(?:\(([^)]*)\))?$/);
+      if (!r) throw new Error(`${path} : reference requise illisible : "${t}"`);
+      const ref = { id: r[1] };
+      for (const opt of (r[2] || '').split(',')) {
+        const o = opt.trim();
+        const tr = o.match(/^trust\s+(\d+)$/);
+        if (tr) ref.trust = Number(tr[1]);
+        else if (o === 'text' || o === 'facts') ref.kind = o;
+      }
+      out.references.push(ref);
+    }
+  }
+  return out;
+}
+
+// "description = prose, 2 a 3 paragraphes ; short = texte nu, 120-155 caracteres"
+function parseProduces(src) {
+  return src.split(';').map((p) => p.trim()).filter(Boolean).map((p) => {
+    const m = p.match(/^([a-zA-Z0-9_.-]+)\s*=\s*(.*)$/s);
+    return m ? { segment: m[1], format: m[2].trim() } : { segment: p, format: '' };
+  });
+}
+
+// Verifie qu'un input satisfait le contrat d'entree du prisme ; rend la
+// liste des manques (vide = conforme).
+export function missingRequirements(prism, input) {
+  const out = [];
+  if (!prism.requires) return out;
+  const refs = new Map((input.references || []).map((r) => [r.id, r]));
+  for (const need of prism.requires.references) {
+    const r = refs.get(need.id);
+    if (!r) { out.push(`reference "${need.id}" absente`); continue; }
+    if (need.trust !== undefined && r.trust !== need.trust) out.push(`reference "${need.id}" : trust ${r.trust}, ${need.trust} attendu`);
+    if (need.kind === 'text' && typeof r.text !== 'string') out.push(`reference "${need.id}" : "text" attendu`);
+    if (need.kind === 'facts' && (typeof r.facts !== 'object' || r.facts === null)) out.push(`reference "${need.id}" : "facts" attendu`);
+  }
+  const segs = new Set(input.segments.map((s) => s.id));
+  for (const id of prism.requires.segments) if (!segs.has(id)) out.push(`segment "${id}" absent`);
+  return out;
 }
 
 // Execute le module de controle du prisme, s'il en a un.

@@ -90,9 +90,9 @@ const MANIFEST = {
   commands: {
     describe: 'describe [--json] : ce manifeste',
     validate: 'validate <input.json> | validate --result <result.json>',
-    prism: 'prism <prism.md> : metadonnees et tampon SHA-256 du prisme',
+    prism: 'prism <prism.md> : metadonnees, contrats d entree (requires) et de sortie (produces), tampon SHA-256 du prisme',
     run: 'run <base-dir> : cree un dossier de run horodate et affiche son chemin absolu',
-    brief: 'brief <prism.md> <run-dir> [--variant a] : ecrit la consigne de redaction, ou de correction si la variante echoue au controle ; affiche son chemin et le fichier que l agent doit ecrire',
+    brief: 'brief <prism.md> <run-dir> [--variant a] : ecrit la consigne de redaction (refuse, exit 2, un input qui ne satisfait pas le contrat requires du prisme), ou de correction si la variante echoue au controle ; affiche son chemin et le fichier que l agent doit ecrire',
     'inverse-brief': 'inverse-brief <run-dir> [--variant a] [--prism <prism.md>] : ecrit la consigne du verificateur (avec la section VERIFICATEUR du prisme si fourni) ; affiche son chemin',
     check: 'check <run-dir> [--variant a] [--prism <prism.md>] [--json] : bijection, tampon et module de controle du prisme | check <input.json> <result.json> [--inverse <f>] [--previous <f>] [--prism <f>] [--json]',
     report: 'report <run-dir> [--out rapport.md] : variantes cote a cote et decisions',
