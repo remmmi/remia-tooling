@@ -587,16 +587,3 @@ test('chain : les constraints du segment ne sont pas reportees a l etape suivant
   assert.ok(input.segments.some((s) => s.constraints), 'la fixture porte des constraints');
   assert.ok(next.segments.every((s) => s.constraints === undefined));
 });
-
-test('module fiche-produit-lcm 1.3.0 : nom entier en strong, casse de la phrase, appel fournisseur, sujet repete', async () => {
-  const { check: lcm } = await import('../prisms/fiche-produit-lcm.check.mjs');
-  const input = { references: [{ id: 'name', trust: 1, text: 'Lit coffre primeflex 300' }] };
-  const run = (text) => lcm({ input, result: { segments: [{ id: 'description', text }] } }).filter((i) => i.level === 'error').map((i) => i.code);
-  const ok = 'Ce <strong>lit coffre</strong> réunit un sommier et un rangement sous le couchage, pour un coin nuit épuré. Il mesure 160x32.5x200 cm.\n\nSa finition tissu s accorde avec une chambre moderne. Le matelas est vendu séparément, et la livraison se fait en 3 colis, démontée.';
-  assert.deepEqual(run(ok), []);
-  assert.ok(run(ok.replace('<strong>lit coffre</strong>', '<strong>Lit coffre primeflex 300</strong>')).includes('r2-strong-nom-entier'));
-  assert.ok(run(ok.replace('<strong>lit coffre</strong>', '<strong>Lit coffre</strong>')).includes('r2-strong-casse'));
-  assert.ok(!run(ok.replace('Ce <strong>lit coffre</strong>', '<strong>Lit coffre</strong>')).includes('r2-strong-casse'), 'en tete de phrase la majuscule est celle de la phrase');
-  assert.ok(run(ok + " Pour toute dimension, n'hésitez pas à nous contacter.").includes('r16-appel-fournisseur'));
-  assert.ok(run(ok.replace('Sa finition', 'Il a une finition tissu. Il est moderne. Il convient à une chambre. Sa finition')).includes('r18-sujet-repete'));
-});

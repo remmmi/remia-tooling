@@ -64,8 +64,8 @@ Pour un générateur d'entrées ou un dispatcheur écrit dans n'importe quel lan
 donne aussi en JSON Schema (draft 2020-12), deux fichiers à côté du prisme :
 
 ```
-input_schema: fiche-produit-lcm.input.schema.json
-output_schema: fiche-produit-lcm.output.schema.json
+input_schema: mon-prisme.input.schema.json
+output_schema: mon-prisme.output.schema.json
 ```
 
 - `input_schema` s'applique à `input.json` entier : `brief` le valide et refuse (exit 2) avec le
