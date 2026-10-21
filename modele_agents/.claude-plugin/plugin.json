@@ -1,0 +1,8 @@
+{
+  "name": "modele-agents",
+  "version": "1.0.0",
+  "description": "Bandeau au-dessus de la saisie : les sous-agents en cours et leur modèle (Explore·Haiku 5.5), le modèle en cyan comme dans la status line.",
+  "author": { "name": "remmmi" },
+  "types": "./types/index.d.ts",
+  "dependencies": ["remia"]
+}
