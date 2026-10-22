@@ -30,7 +30,9 @@ Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `
 fichier d'instructions : [`markitdown/INSTALL.md`](markitdown/INSTALL.md).
 
 Hors marketplace, installés à la main depuis un clone : [`prismText`](prismText/) (réécriture de textes
-par prismes) et [`ctrlmajMDTerm`](ctrlmajMDTerm/) (liens `.md` ouverts dans mdterm sous herdr).
+par prismes), [`ctrlmajMDTerm`](ctrlmajMDTerm/) (liens `.md` ouverts dans mdterm sous herdr) et
+[`skills/integration-maquettes`](skills/integration-maquettes/) (vérifier une intégration contre sa
+maquette par la mesure ; usage ponctuel, `remia` ne le propose pas).
 [`claudeBridge`](claudeBridge/) est à revoir et n'est pas proposé.
 
 ## Installer une machine
@@ -233,6 +235,7 @@ tests/check.sh                    contrôle avant de pousser
 tests/plugin-setup-test.sh        autotest de lib/plugin-setup.sh (HOME jetable, faux plugin)
 remia/  rename_herdr/  usec/  markitdown/                     un dossier par plugin (.claude-plugin/plugin.json, hooks/, skills/)
 skills/simple/  skills/decode/  skills/chatroom/              les plugins qui ne sont qu'un skill ; skills/README.md les liste
+skills/integration-maquettes/                                 skill hors marketplace (lien symbolique à la main, pas proposé)
 prismText/  ctrlmajMDTerm/  claudeBridge/                     hors marketplace, installés à la main (chacun son README)
 .github/workflows/prismtext.yml   tests de prismText sous Node 18, 20 et 22 à chaque push qui le touche
 docs/superpowers/specs/           la conception de ce système

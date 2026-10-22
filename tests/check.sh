@@ -93,7 +93,7 @@ if [ "$QUICK" = 0 ]; then
   else
     echo "--  claude introuvable : validation des manifestes sautée"
   fi
-  for t in tests/plugin-setup-test.sh remia/selftest.sh usec/selftest.sh markitdown/selftest.sh herdr_vues/selftest.sh; do
+  for t in tests/plugin-setup-test.sh remia/selftest.sh usec/selftest.sh markitdown/selftest.sh herdr_vues/selftest.sh skills/integration-maquettes/selftest.sh; do
     out=$("$t" 2>&1) && good "$t : $(tail -n 1 <<<"$out")" || { bad "$t : $(tail -n 1 <<<"$out")"; grep '^KO' <<<"$out" | sed 's/^/    /'; }
   done
   if command -v claude >/dev/null; then
