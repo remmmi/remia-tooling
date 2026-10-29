@@ -29,7 +29,7 @@ same "herdr-vues : plugin.json = SKILL.md"                "$(manifest herdr_vues
 same "herdr-vues : plugin.json = bin/vue"                 "$(manifest herdr_vues)" "$(sed -n 's/^VERSION="\(.*\)"$/\1/p' herdr_vues/bin/vue)"
 
 # ── chaque version figure dans le tableau « Versions » du README de l'outil
-for d in remia rename_herdr usec skills/simple skills/decode skills/chatroom markitdown herdr_vues modele_agents; do
+for d in remia rename_herdr usec skills/simple skills/decode skills/chatroom markitdown herdr_vues bandeau_sous_agents; do
   v=$(manifest "$d")
   grep -q "^| $v |" "$d/README.md" && good "$d/README.md : ligne $v dans Versions" || bad "$d/README.md : pas de ligne $v dans Versions"
 done
@@ -78,7 +78,7 @@ done
 
 # ── rien de personnel dans ce qui est distribué (chemin absolu d'un compte, nom de machine ou de projet)
 perso=$(grep -rnIP '(?<![\w$}])/home/[a-z0-9_-]+/|kilorem|kilometrack' --exclude-dir=.git \
-          .claude-plugin remia rename_herdr usec skills markitdown herdr_vues modele_agents lib bootstrap.sh README.md 2>/dev/null || true)
+          .claude-plugin remia rename_herdr usec skills markitdown herdr_vues bandeau_sous_agents lib bootstrap.sh README.md 2>/dev/null || true)
 if [ -n "$perso" ]; then
   bad "chemin ou nom personnel dans les fichiers distribués :"; sed 's/^/    /' <<<"$perso"
 else
@@ -87,7 +87,7 @@ fi
 
 if [ "$QUICK" = 0 ]; then
   if command -v claude >/dev/null; then
-    for d in . remia rename_herdr usec skills/simple skills/decode markitdown herdr_vues modele_agents; do
+    for d in . remia rename_herdr usec skills/simple skills/decode markitdown herdr_vues bandeau_sous_agents; do
       claude plugin validate "$d" >/dev/null 2>&1 && good "claude plugin validate $d" || bad "claude plugin validate $d"
     done
   else
@@ -97,8 +97,8 @@ if [ "$QUICK" = 0 ]; then
     out=$("$t" 2>&1) && good "$t : $(tail -n 1 <<<"$out")" || { bad "$t : $(tail -n 1 <<<"$out")"; grep '^KO' <<<"$out" | sed 's/^/    /'; }
   done
   if command -v claude >/dev/null; then
-    out=$(claude plugin test modele_agents 2>&1) && good "claude plugin test modele_agents : $(grep -m1 ' pass$' <<<"$out")" \
-      || { bad "claude plugin test modele_agents"; grep -A2 '(fail)' <<<"$out" | sed 's/^/    /'; }
+    out=$(claude plugin test bandeau_sous_agents 2>&1) && good "claude plugin test bandeau_sous_agents : $(grep -m1 ' pass$' <<<"$out")" \
+      || { bad "claude plugin test bandeau_sous_agents"; grep -A2 '(fail)' <<<"$out" | sed 's/^/    /'; }
   fi
 fi
 

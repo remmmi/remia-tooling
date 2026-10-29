@@ -48,9 +48,9 @@
       "description": "Skill markitdown : tout document non-markdown passe par un aiguillage ; source de contenu, il est converti en Markdown avant lecture (PDF, Word, Excel, PowerPoint, Outlook, HTML, EPUB…)."
     },
     {
-      "name": "modele-agents",
-      "source": "./modele_agents",
-      "description": "Bandeau au-dessus de la saisie : les sous-agents en cours et leur modèle, en cyan comme dans la status line."
+      "name": "bandeau-sous-agents",
+      "source": "./bandeau_sous_agents",
+      "description": "Bandeau au-dessus de la saisie : les sous-agents en cours, leur modèle et leur effort, le modèle en cyan comme dans la status line."
     },
     {
       "name": "voxtunnel",

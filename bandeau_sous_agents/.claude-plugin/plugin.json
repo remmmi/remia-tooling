@@ -1,0 +1,8 @@
+{
+  "name": "bandeau-sous-agents",
+  "version": "1.1.0",
+  "description": "Bandeau au-dessus de la saisie : les sous-agents en cours, leur modèle et leur effort (Explore·Haiku 5.5 high), le modèle en cyan comme dans la status line.",
+  "author": { "name": "remmmi" },
+  "types": "./types/index.d.ts",
+  "dependencies": ["remia"]
+}
