@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# usec — quotas de l'abonnement Claude (fenêtre de session, semaine, semaine par modèle) en JSON.
+# usec — quotas de l'abonnement Claude (semaine tous modèles, semaine par modèle) en JSON.
+# Plus de fenêtre de session (5 h) : Anthropic l'a retirée des abonnements (11/2026) ; une ligne
+# « Current session » éventuelle est ignorée.
 # Appelle `claude -p "/usage"` et parse la sortie. Script autonome : marche depuis un shell
 # non interactif (préfixe ! de Claude Code, cron, sous-processus) — contrairement à un alias.
 #
@@ -11,7 +13,7 @@
 # Code retour : 0 = JSON valide ; 1 = sortie non reconnue (format changé, pas d'abonnement…).
 set -o pipefail
 # Version de l'outil usec (usec, usec-watch, quota_gate.sh), pas du dépôt : voir README § Versions.
-USEC_VERSION=1.1.0
+USEC_VERSION=1.2.0
 
 case "${1:-}" in
   --version) echo "usec $USEC_VERSION"; exit 0 ;;
@@ -78,7 +80,7 @@ def parse_reset(value, timezone):
     return reset.isoformat(timespec="seconds")
 
 pattern = re.compile(
-    r"^Current (session|week \(([^)]+)\)):\s*"
+    r"^Current week \(([^)]+)\):\s*"
     r"(\d+(?:\.\d+)?)% used\s*·\s*resets\s+"
     r"(.+?)\s+\(([^)]+)\)\s*$",
     re.MULTILINE,
@@ -87,9 +89,9 @@ pattern = re.compile(
 try:
     quotas = []
     for match in pattern.finditer(sys.stdin.read()):
-        label, model, used, reset, timezone = match.groups()
+        model, used, reset, timezone = match.groups()
         quotas.append({
-            "period": "session" if label == "session" else "week",
+            "period": "week",
             "models": model or "all models",
             "used_percent": float(used),
             "reset_at": parse_reset(reset, timezone),

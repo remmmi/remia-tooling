@@ -1,14 +1,15 @@
 # usec — lire les quotas de l'abonnement Claude avant de foncer dans le mur
 
-`usec` rend en JSON ce qu'affiche `/usage` dans Claude Code : fenêtre de session (5 h glissantes),
-semaine tous modèles, semaine par modèle, avec le pourcentage consommé et l'heure du reset. Un
+`usec` rend en JSON ce qu'affiche `/usage` dans Claude Code : semaine tous modèles, semaine par
+modèle, avec le pourcentage consommé et l'heure du reset. (La fenêtre de session de 5 h a disparu des
+abonnements en 11/2026 : plus suivie, une ligne « Current session » éventuelle est ignorée.) Un
 agent (ou un script) le lit avant une tâche lourde, au lieu de découvrir le quota épuisé au
 milieu d'un lot.
 
 ```
 $ usec
-{"quotas": [{"period": "session", "models": "all models", "used_percent": 42.0,
-             "reset_at": "2026-09-29T02:20:00+02:00", "timezone": "Europe/Paris"}, …]}
+{"quotas": [{"period": "week", "models": "all models", "used_percent": 67.0,
+             "reset_at": "2026-09-30T00:00:00+02:00", "timezone": "Europe/Paris"}, …]}
 ```
 
 ## Ce que contient ce dossier
@@ -34,15 +35,15 @@ active en permanence. Deux couches :
 
 1. **Hook `usec-watch`** (la garantie) — branché sur `UserPromptSubmit` et `PostToolUse`. Il sort
    en quelques ms tant que le dernier relevé a moins de 20 min ; sinon il relance `usec` détaché,
-   sans bloquer. Il garde un historique et projette : session au rythme des 90 dernières minutes, semaine à la moyenne depuis le début de la semaine (après 6 h — une rafale de travail ne se prolonge pas 24 h/24). Silence
+   sans bloquer. Il garde un historique et projette la semaine à la moyenne depuis le début de la semaine (après 6 h — une rafale de travail ne se prolonge pas 24 h/24). Silence
    tant que rien n'est critique ; sinon une ligne `[usec-watch] …` arrive dans le contexte de
    l'agent, qui prévient l'utilisateur. Une même alerte ne revient pas avant 1 h dans une session.
 2. **Règle en contexte** (le jugement) — injectée en début de session par le plugin : l'agent peut lire `usec-watch status` (gratuit) après ou
    avant une étape lourde, et n'en parle que si c'est critique.
 
-**Critique** = session ou semaine ≥ 85 %, ou 100 % atteint avant le reset au rythme actuel ; une
-session qui se réinitialise dans moins de 30 min ne compte pas. Réglages : `USEC_WATCH_TTL`,
-`USEC_WATCH_CRIT`, `USEC_WATCH_SESSION_GUARD`, `USEC_WATCH_REALERT` (voir `usec-watch --help`).
+**Critique** = un quota semaine ≥ 85 %, ou 100 % atteint avant le reset au rythme moyen de la
+semaine. Réglages : `USEC_WATCH_TTL`, `USEC_WATCH_CRIT`, `USEC_WATCH_WEEK_GUARD`, `USEC_WATCH_REALERT`
+(voir `usec-watch --help`).
 État dans `~/.local/state/usec/`. Coût : ~3 appels `/usage` par heure d'activité, zéro au repos.
 
 ## Installer
@@ -70,7 +71,7 @@ export USEC_GATE_DIR=./etat_du_lot; usec_gate_reset
 for id in $(cat ids.txt); do usec_gate || { echo "pause : $(usec_gate_motif)"; break; }; claude -p …; done
 ```
 
-Seuils : `USEC_GATE_SESSION_MAX` (70), `USEC_GATE_WEEK_MAX` (85). Cache 120 s partagé entre workers.
+Seuil : `USEC_GATE_WEEK_MAX` (85). Cache 120 s partagé entre workers.
 
 ## Versions
 
@@ -82,6 +83,7 @@ l'installé au dépôt. Un `usec` qui répond « argument inconnu » à `--versi
 
 | Version | Changements |
 |---|---|
+| 1.2.0 | Plus de fenêtre de session (Anthropic l'a retirée des abonnements, 11/2026) : `usec` ne rend que les quotas semaine et ignore une ligne « Current session » ; `usec-watch` ne projette plus que la semaine (`USEC_WATCH_SESSION_GUARD` retiré) ; `quota_gate.sh` n'a plus que `USEC_GATE_WEEK_MAX` (`USEC_GATE_SESSION_MAX` ignoré). |
 | 1.1.0 | Plugin de la marketplace `remia-tooling` : hooks et règle apportés par le plugin (plus rien dans `settings.json` ni `CLAUDE.md`), réglage `lang`, mise en place automatique au démarrage de session. `install.sh --uninstall`. |
 | 1.0.0 | Première version numérotée : `usec --version`, `install.sh --check`. |
 
@@ -98,4 +100,4 @@ l'installé au dépôt. Un `usec` qui répond « argument inconnu » à `--versi
   un verrou l'empêchent de se surveiller en boucle.
 - Aucun quota mensuel n'apparaît dans `/usage` sur un abonnement standard ; si une ligne apparaît,
   elle n'est suivie que si elle a la forme `Current …: N% used · resets …`.
-- Mesuré sur un drain : 4 workers parallèles ont vidé une fenêtre de session en 50 min ; 2 est un bon défaut.
+- Mesuré sur un drain (du temps de la fenêtre de session) : 4 workers parallèles l'ont vidée en 50 min ; 2 reste un bon défaut.

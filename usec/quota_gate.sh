@@ -10,8 +10,8 @@
 #
 # Réglages (variables d'environnement) :
 #   USEC_BIN               commande usec                      (défaut : usec)
-#   USEC_GATE_SESSION_MAX  seuil fenêtre de session, en %     (défaut : 70)
 #   USEC_GATE_WEEK_MAX     seuil de chaque quota semaine, en % (défaut : 85)
+#   (plus de seuil de session : la fenêtre de 5 h a disparu des abonnements en 11/2026)
 #   USEC_GATE_TTL          durée de vie du cache, en s        (défaut : 120 — usec coûte ~4-20 s)
 # Le cache est partagé entre workers parallèles qui ont le même USEC_GATE_DIR.
 # usec illisible (format changé, réseau) = porte OUVERTE : garder un coupe-circuit à côté.
@@ -47,13 +47,13 @@ try:
     quotas = json.load(open(sys.argv[1]))["quotas"]
 except Exception:
     sys.exit(0)
+limit = float(sys.argv[2])
 for q in quotas:
-    limit = float(sys.argv[2] if q.get("period") == "session" else sys.argv[3])
     if float(q.get("used_percent", 0)) >= limit:
         print("%s/%s %s%% >= %g%% (reset %s)" % (
             q.get("period"), q.get("models"), q.get("used_percent"), limit, q.get("reset_at", "?")))
         break
-' "$cache" "${USEC_GATE_SESSION_MAX:-70}" "${USEC_GATE_WEEK_MAX:-85}")
+' "$cache" "${USEC_GATE_WEEK_MAX:-85}")
   [ -z "$motif" ] && return 0
   printf '%s\n' "$motif" > "$stop"
   return 1

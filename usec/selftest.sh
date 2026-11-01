@@ -9,10 +9,12 @@ check() { if eval "$2"; then echo "ok  $1"; ok=$((ok+1)); else echo "KO  $1"; ko
 
 # 1. parsing de la fixture
 "$HERE/usec" --stdin < "$HERE/fixtures/usage_sample.txt" > "$T/q.json"
-check "parse : 3 quotas" \
-  "python3 -c 'import json,sys; q=json.load(open(\"$T/q.json\"))[\"quotas\"]; sys.exit(len(q)!=3)'"
-check "parse : session 42 %, reset ISO avec fuseau" \
-  "python3 -c 'import json,sys; s=json.load(open(\"$T/q.json\"))[\"quotas\"][0]; sys.exit(not (s[\"period\"]==\"session\" and s[\"used_percent\"]==42.0 and s[\"reset_at\"].endswith(\":00\") and \"T02:20\" in s[\"reset_at\"]))'"
+check "parse : 2 quotas (semaine tous modèles, semaine par modèle)" \
+  "python3 -c 'import json,sys; q=json.load(open(\"$T/q.json\"))[\"quotas\"]; sys.exit(len(q)!=2)'"
+check "parse : semaine 67 %, reset ISO avec fuseau" \
+  "python3 -c 'import json,sys; s=json.load(open(\"$T/q.json\"))[\"quotas\"][0]; sys.exit(not (s[\"period\"]==\"week\" and s[\"models\"]==\"all models\" and s[\"used_percent\"]==67.0 and s[\"reset_at\"].endswith(\":00\") and \"T00:00\" in s[\"reset_at\"]))'"
+check "parse : une ligne « Current session » est ignorée" \
+  "printf 'Current session: 42%% used · resets Sep 29, 2:20am (Europe/Paris)\nCurrent week (all models): 5%% used · resets Sep 30, 12am (Europe/Paris)\n' | '$HERE/usec' --stdin | python3 -c 'import json,sys; q=json.load(sys.stdin)[\"quotas\"]; sys.exit(not (len(q)==1 and q[0][\"period\"]==\"week\"))'"
 check "parse : sortie non reconnue → rc 1" \
   "! echo 'rien à voir' | '$HERE/usec' --stdin >/dev/null 2>&1"
 
@@ -20,13 +22,12 @@ check "version : usec --version"              "'$HERE/usec' --version | grep -qE
 
 # 2. porte quota, avec un faux usec qui rend la fixture
 printf '#!/bin/sh\ncat "%s"\n' "$T/q.json" > "$T/fake_usec"; chmod +x "$T/fake_usec"
-gate() { ( export USEC_BIN="$1" USEC_GATE_DIR="$T/gate" USEC_GATE_SESSION_MAX="$2" USEC_GATE_WEEK_MAX="$3"
+gate() { ( export USEC_BIN="$1" USEC_GATE_DIR="$T/gate" USEC_GATE_WEEK_MAX="$2"
            source "$HERE/quota_gate.sh"; usec_gate_reset; usec_gate ); }
-check "porte : sous les seuils → ouverte"      "gate '$T/fake_usec' 70 85"
-check "porte : session 42 % >= 40 → fermée"    "! gate '$T/fake_usec' 40 85"
-check "porte : motif écrit dans _stop_quota"   "grep -q 'session/all models 42.0% >= 40%' '$T/gate/_stop_quota'"
-check "porte : semaine 67 % >= 60 → fermée"    "! gate '$T/fake_usec' 99 60"
-check "porte : usec illisible → ouverte"       "gate /bin/false 1 1"
+check "porte : sous le seuil → ouverte"        "gate '$T/fake_usec' 85"
+check "porte : semaine 67 % >= 60 → fermée"    "! gate '$T/fake_usec' 60"
+check "porte : motif écrit dans _stop_quota"   "grep -q 'week/all models 67.0% >= 60%' '$T/gate/_stop_quota'"
+check "porte : usec illisible → ouverte"       "gate /bin/false 1"
 
 # 3. installeur (dans un HOME jetable) et bloc CLAUDE.md idempotent
 printf '# Mon CLAUDE.md\n\nRègle existante.\n' > "$T/CLAUDE.md"
@@ -59,7 +60,7 @@ EOF_MK
 }
 hk() { printf '{"session_id":"%s","hook_event_name":"%s"}' "${1:-s1}" "${2:-UserPromptSubmit}" \
          | USEC_BIN=/bin/false "$HERE/usec-watch" hook --lang fr; }
-LOW='[{"period":"session","used_percent":20,"reset_in":9000},{"period":"week","used_percent":40,"reset_in":200000}]'
+LOW='[{"period":"week","used_percent":40,"reset_in":200000}]'
 WEEK90='[{"period":"week","used_percent":90,"reset_in":80000}]'
 
 rm -rf "$W"
@@ -72,13 +73,9 @@ check "watch : même session → pas de répétition" "[ -z \"\$(hk)\" ]"
 check "watch : autre session → alerte"         "hk s2 | grep -q 'additionalContext'"
 check "watch : hookEventName suit l'événement" "hk s3 PostToolUse | grep -q '\"hookEventName\": \"PostToolUse\"'"
 mk '[{"period":"session","used_percent":95,"reset_in":600}]'
-check "watch : session qui se réinitialise < 30 min → silence" "[ -z \"\$(hk)\" ]"
+check "watch : un ancien relevé de session (5 h) est ignoré" "[ -z \"\$(hk)\" ]"
 mk "$WEEK90" 10800
 check "watch : relevé de plus de 2 h → silence" "[ -z \"\$(hk)\" ]"
-mk '[{"period":"session","used_percent":70,"reset_in":10800}]' 0 '[[1200, 60], [0, 70]]'
-check "watch : 70 % mais 100 % avant le reset → alerte projetée" "hk | grep -q 'au rythme actuel, 100 %'"
-mk '[{"period":"session","used_percent":70,"reset_in":10800}]' 0 '[[1200, 69], [0, 70]]'
-check "watch : pente lente → silence"          "[ -z \"\$(hk)\" ]"
 # Semaine : une rafale en début de semaine (0 → 3 % en 80 min, 12 h après le reset) ne doit pas
 # se projeter 24 h/24 (fausse alerte du 30/09/2026 : « 100 % le 04/10 ») — moyenne depuis le début.
 mk '[{"period":"week","used_percent":3,"reset_in":560400}]' 0 '[[4800, 0], [0, 3]]'
@@ -91,8 +88,8 @@ check "watch : USEC_WATCH_INNER → silence"     "[ -z \"\$(printf '{}' | USEC_W
 rm -rf "$W"
 printf '{}' | USEC_BIN="$T/fake_usec" "$HERE/usec-watch" hook >/dev/null
 for _ in $(seq 50); do [ -s "$W/last.json" ] && break; sleep 0.1; done
-check "watch : relevé périmé → rafraîchi en arrière-plan" "[ -s '$W/last.json' ] && grep -q session '$W/history.jsonl'"
-check "watch : status lit le relevé"           "'$HERE/usec-watch' status | grep -q 'session: 42 %'"
+check "watch : relevé périmé → rafraîchi en arrière-plan" "[ -s '$W/last.json' ] && grep -q week '$W/history.jsonl'"
+check "watch : status lit le relevé"           "'$HERE/usec-watch' status | grep -q 'week (all models): 67 %'"
 unset USEC_WATCH_DIR
 
 # 5. installeur : hooks fusionnés sans toucher aux existants, idempotent

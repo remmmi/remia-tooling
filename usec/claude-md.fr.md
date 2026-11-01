@@ -9,8 +9,8 @@ projette la consommation au rythme actuel. Il ne dit rien tant que tout va bien.
 - **Sinon, à ton jugement** : après une étape lourde, ou avant d'en lancer une (chaîne de
   `claude -p`, sous-agents en nombre, lot), lire `usec-watch status` — gratuit, dernier relevé +
   projection. `usec` force un relevé frais (coûte un appel). Ne pas en parler si rien n'est critique.
-- **Critique** = session ou semaine ≥ 85 %, ou 100 % atteint avant le reset au rythme actuel
-  (une session qui se réinitialise dans moins de 30 min ne compte pas).
+- **Critique** = un quota semaine ≥ 85 %, ou 100 % atteint avant le reset au rythme moyen de la
+  semaine (il n'y a plus de fenêtre de session de 5 h).
 - **Scripts automatiques** : sourcer `~/.local/share/usec/quota_gate.sh` et appeler `usec_gate`
   avant chaque `claude -p` (pause propre au seuil, reprise à l'identique après le reset).
 - Un échec de quota ressemble à un échec de modèle (rc 1) : regarder la durée de l'appel —
