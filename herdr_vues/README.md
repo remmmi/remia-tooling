@@ -56,4 +56,5 @@ Ancien skill `~/.claude/skills/herdr-montrer/` : `remia-tooling migrate herdr-vu
 
 | Version | Changement |
 |---|---|
+| 1.0.1 | Un seul nano par fichier : `lire` referme le pane précédent (ou refuse s'il a des modifications), `saisir` refuse ; détection par /proc et par le nom du pane. |
 | 1.0.0 | Première version : skill réécrit depuis l'usage du 3 au 17/10/2026, commande `vue` (saisir, lire, montrer, etat, attendre, fermer, secret, nettoyer). |

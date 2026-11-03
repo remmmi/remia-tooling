@@ -115,6 +115,19 @@ vue montrer "tests" bash tools/test_plugins.sh
   une fois ne se relit pas : relancer par `vue montrer` sur le même nom.
 - Quand c'est fini et commenté : `vue fermer <pane>`.
 
+## 4 bis. Un seul nano par fichier
+
+Relancer `vue lire` ou `vue saisir` sur un fichier déjà ouvert dans un pane ouvrait un second nano : verrou
+nano (« is being edited by …, open anyway? ») dans le nouveau pane, contenu périmé dans l'ancien (constaté
+le 04/11/2026 sur un prompt réécrit). `vue` vérifie maintenant avant d'ouvrir :
+
+- `lire` : l'ancien pane est refermé (ctrl+x) puis le fichier rouvert ; si nano y reste ouvert, c'est que
+  l'utilisateur a des modifications non enregistrées → refus, lui demander de finir (Ctrl+O, Entrée, Ctrl+X).
+- `saisir` : refus tant que l'autre nano est ouvert (il tape peut-être dedans) ; `vue etat` / `vue attendre`.
+- nano ouvert hors d'un pane `vue` (autre onglet, autre session) : refus, avec le pid.
+
+Après avoir réécrit un fichier déjà affiché, relancer simplement `vue lire` : c'est lui qui rafraîchit.
+
 ## 5. Ranger
 
 - Les panes nano se ferment seuls. Les vues `montrer` se ferment quand leur sujet est clos ; sur

@@ -13,11 +13,14 @@
 #   vue secret <fichier>                              empreinte d'un fichier sans jamais en montrer le contenu
 #   vue nettoyer <fichier>                            retire les lignes de consigne « vue: » posées par saisir
 #
+# Un seul nano par fichier : `lire` referme le pane précédent s'il n'a rien de modifié (sinon refuse),
+# `saisir` refuse tant que l'autre nano est ouvert.
+#
 # Sortie : l'identifiant du pane ouvert (stdout), une ligne par écart (stderr). VUE_DRY=1 imprime les
 # commandes herdr/tmux au lieu de les lancer (autotest).
 set -euo pipefail
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 NANO_LIRE=(--softwrap --atblanks --mouse --indicator --smarthome --zap --minibar --stateflags)
 NANO_SAISIR=(--softwrap --atblanks --mouse)
 
@@ -105,6 +108,67 @@ sans_multiplexeur() {
     exit 3
 }
 
+# Un seul nano par fichier. Deux nano sur le même fichier = verrou nano (« is being edited by …,
+# open anyway? ») dans le second pane, et l'ancien pane montre un contenu périmé. Constaté le 04/11/2026.
+nano_sur() {  # nano_sur <fichier> → pids des nano ouverts sur ce fichier (chemin résolu)
+    local cible pid cwd a
+    cible=$(realpath -m -- "$1")
+    for pid in $(pgrep -x nano 2>/dev/null); do
+        cwd=$(readlink -- "/proc/$pid/cwd" 2>/dev/null) || continue
+        while IFS= read -r -d '' a; do
+            case $a in -*|nano) continue ;; esac
+            if [ "$(realpath -m -- "$cwd/$a" 2>/dev/null)" = "$cible" ] \
+               || [ "$(realpath -m -- "$a" 2>/dev/null)" = "$cible" ]; then echo "$pid"; break; fi
+        done < "/proc/$pid/cmdline"
+    done
+    return 0  # sous set -e, le dernier test faux ferait échouer l'appelant
+}
+
+panes_nano() {  # panes_nano <fichier> → ids des panes nommés comme le fichier où nano est au premier plan
+    local nom id
+    nom=$(basename -- "$1")
+    case $(backend) in
+        herdr)
+            for id in $(herdr pane list --workspace "$HERDR_WORKSPACE_ID" 2>/dev/null                         | jq -r --arg n "$nom" '.result.panes[] | select(.label==$n) | .pane_id'); do
+                [ "$(premier_plan "$id")" = nano ] && echo "$id" || true
+            done ;;
+        tmux)
+            tmux list-panes -a -F '#{pane_id} #{pane_current_command} #{pane_title}' 2>/dev/null                 | awk -v n="$nom" '$2=="nano" && $3==n {print $1}' ;;
+    esac
+    return 0
+}
+
+# sans_doublon <fichier> <lire|saisir> : avant d'ouvrir un nano, s'assurer qu'il n'y en a pas déjà un.
+# lire : on referme le pane précédent (ctrl+x ; sans modification nano quitte et le pane se ferme) ;
+#        s'il reste ouvert, l'utilisateur a des modifications non enregistrées → on refuse.
+# saisir : on refuse toujours (il est peut-être en train de taper dedans).
+sans_doublon() {
+    dry && return 0
+    local f=$1 mode=$2 pids ids id i
+    pids=$(nano_sur "$f" | tr '\n' ' ')
+    [ -n "${pids// /}" ] || return 0
+    ids=$(panes_nano "$f" | tr '\n' ' ')
+    if [ -z "${ids// /}" ]; then
+        die "nano est déjà ouvert sur $f hors des panes vue (pid $pids) : le fermer avant de rouvrir"
+    fi
+    if [ "$mode" = saisir ]; then
+        die "déjà en saisie dans le pane $ids (nano ouvert sur $f) : attendre sa fermeture (vue etat / vue attendre), pas de second nano"
+    fi
+    for id in $ids; do
+        case $(backend) in
+            herdr) herdr pane send-keys "$id" ctrl+x >/dev/null ;;
+            tmux) tmux send-keys -t "$id" C-x ;;
+        esac
+    done
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+        [ -z "$(nano_sur "$f")" ] && break; sleep 0.3
+    done
+    if [ -n "$(nano_sur "$f")" ]; then
+        die "nano reste ouvert dans $ids sur $f : modifications non enregistrées ? L'utilisateur finit (Ctrl+O, Entrée, Ctrl+X), puis relancer"
+    fi
+    echo "vue: ancien nano sur $(basename -- "$f") refermé ($ids), réouverture" >&2
+}
+
 # Commande nano (une ligne shell) ; le `; exit` ferme le pane à la sortie de nano.
 ligne_nano() {  # ligne_nano <mode lire|saisir> <fichier> [+N]
     local mode=$1 f=$2 pos=${3:-} opts=() rc
@@ -154,6 +218,7 @@ cmd_saisir() {
     if [ ! -s "$f" ]; then marque "$f" "$consigne" > "$f"; pos="+2"; fi
     local ligne; ligne=$(ligne_nano saisir "$f" "$pos")
     [ "$(backend)" = aucun ] && ! dry && sans_multiplexeur "${ligne%; exit}"
+    sans_doublon "$f" saisir
     local id; id=$(split "$(direction)" 1)
     nommer "$id" "$(basename -- "$f")"
     run "$id" "$ligne"
@@ -174,6 +239,8 @@ cmd_lire() {
     [ -r "$f" ] || die "illisible : $f"
     [ "$sous" = 0 ] || [ -r "$f2" ] || die "illisible : ${f2:-(--sous sans fichier)}"
     [ "$(backend)" = aucun ] && ! dry && sans_multiplexeur "$(ligne_nano lire "$f" "$pos" | sed 's/; exit$//')"
+    sans_doublon "$f" lire
+    [ "$sous" = 0 ] || sans_doublon "$f2" lire
     if [ "$sous" = 0 ]; then
         local id; id=$(split "$(direction)" 1)
         nommer "$id" "$(basename -- "$f")"
