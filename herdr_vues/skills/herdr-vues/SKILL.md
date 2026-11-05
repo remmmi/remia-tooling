@@ -8,8 +8,9 @@ description: >
   est à relire ou corriger (brouillon de mail, d'issue, de PR, réponse à envoyer, doc, texte et son
   décodage) ; une commande longue ou un log à suivre (deploy, import, tests, tail -f, watch, sous-agent).
   Aussi sur « montre-moi en entier », « affiche », « ouvre dans nano », « ouvre en pane », « pane
-  token », « je veux voir », « surveille », « ferme les panes ». Outil : commande `vue`.
-version: 1.0.0
+  token », « je veux voir », « surveille », « ferme les panes ». Un texte à copier tel quel (prompt à
+  coller ailleurs) : `cat` dans un pane, pas nano. Outil : commande `vue`.
+version: 1.0.2
 ---
 
 # Vues : saisir, lire, montrer
@@ -22,7 +23,7 @@ semaines d'usage. Chacun correspond à une sous-commande de `vue` (dans le PATH 
 | Verbe | Quand | Commande | Focus |
 |---|---|---|---|
 | **saisir** | l'utilisateur doit **fournir** un contenu : secret, collage d'un résultat obtenu ailleurs, ligne à ajouter dans un fichier | `vue saisir <fichier> "<quoi coller>" [--secret]` | oui : il doit agir |
-| **lire** | l'utilisateur doit **lire ou corriger** un texte long : brouillon, issue, PR, réponse à envoyer, texte + son décodage | `vue lire <fichier> [+N] [--numeros] [--sous <fichier2>]` | oui |
+| **lire** | l'utilisateur doit **lire ou corriger** un texte long : brouillon, issue, PR, réponse à envoyer, texte + son décodage (s'il va seulement le copier : `cat`, voir § 3) | `vue lire <fichier> [+N] [--numeros] [--sous <fichier2>]` | oui |
 | **montrer** | quelque chose **vit dans le temps** : commande longue, log, `watch`, sous-agent | `vue montrer "<nom>" <commande…>` | **non**, jamais |
 
 `vue` choisit seul la géométrie (à droite au-dessus de 120 colonnes, en dessous sinon), nomme le pane,
@@ -91,6 +92,10 @@ vue lire issue.md --sous issue-traduit.md    # l'original en haut, le décodage 
 vue lire brouillon.md --numeros              # « affiche les lignes »
 ```
 
+- **À copier seulement, pas à corriger** (un prompt à coller ailleurs, une commande, un message prêt à
+  partir) : `vue montrer "<nom>" cat <fichier>`, jamais `vue lire`. C'est à moi de le deviner : « donne-moi
+  un prompt » veut dire qu'il va le copier. nano capture la souris (`--mouse`) et n'affiche qu'un écran,
+  ce qui gêne la sélection. Le texte reste écrit un paragraphe par ligne ; `vue fermer` une fois copié.
 - Options de confort toujours mises : retour à la ligne aux espaces, souris, position. Un texte écrit
   pour être lu dans nano s'écrit **un paragraphe par ligne**. Un retour à la ligne dur à 80 ou 120
   colonnes coupe les phrases au milieu.
