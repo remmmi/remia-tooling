@@ -7,6 +7,8 @@
 #                                                     --sous : <fichier> en haut, <fichier2> en dessous
 #   vue montrer <nom> <commande…>                     commande dans un pane nommé, sans prendre le focus ;
 #                                                     réutilise le pane <nom> s'il existe
+#   vue image <nom> <image[=légende]>… [--lignes N]   images dans un pane nommé (protocole graphique kitty,
+#                                                     que herdr laisse passer) ; converties en PNG, 1200 px max
 #   vue etat <pane>                                   « nano ouvert », « shell », « occupé : <prog> » ou « fermé »
 #   vue attendre <pane> [secondes]                    rend la main quand le pane est fermé (défaut 1800 s)
 #   vue fermer <pane> [--force]                       refuse si nano y est encore ouvert
@@ -20,7 +22,7 @@
 # commandes herdr/tmux au lieu de les lancer (autotest).
 set -euo pipefail
 
-VERSION="1.0.2"
+VERSION="1.0.3"
 NANO_LIRE=(--softwrap --atblanks --mouse --indicator --smarthome --zap --minibar --stateflags)
 NANO_SAISIR=(--softwrap --atblanks --mouse)
 
@@ -281,6 +283,67 @@ cmd_montrer() {
     echo "$id"
 }
 
+# png_depuis <source> <png> : PNG (le seul format du protocole kitty), au plus 1200 px de large, première image seule.
+png_depuis() {
+    if php -r 'exit(class_exists("Imagick") ? 0 : 1);' 2>/dev/null; then
+        php -r '$i = new Imagick($argv[1]); $i->setIteratorIndex(0); $i = $i->getImage(); $i->autoOrient();
+                if ($i->getImageWidth() > 1200) $i->resizeImage(1200, 0, Imagick::FILTER_LANCZOS, 1);
+                $i->setImageFormat("png"); $i->writeImage($argv[2]);' "$1" "$2"
+    elif command -v magick >/dev/null; then magick "$1[0]" -auto-orient -resize '1200>' "$2"
+    elif command -v convert >/dev/null; then convert "$1[0]" -auto-orient -resize '1200>' "$2"
+    elif python3 -c 'import PIL' 2>/dev/null; then
+        python3 -c 'import sys; from PIL import Image, ImageOps; i = ImageOps.exif_transpose(Image.open(sys.argv[1])); i.thumbnail((1200, 100000)); i.save(sys.argv[2])' "$1" "$2"
+    else die "pas de convertisseur PNG (php-imagick, ImageMagick ou python3-pillow)"; fi
+}
+
+# vue image <nom> <image[=légende]>… [--lignes N] : chaque image, précédée de sa légende (ou de son nom), dans un
+# pane nommé sans focus. Le pane est un vrai terminal : herdr y rend le protocole graphique kitty (constaté le
+# 09/11/2026), là où la session Bash de l'agent n'a même pas de /dev/tty.
+cmd_image() {
+    [ $# -ge 2 ] || die "usage : vue image <nom> <image[=légende]>… [--lignes N]"
+    local nom=$1; shift
+    local lignes=18 sources=() a f leg png dir="" liste=()
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --lignes) [ $# -ge 2 ] || die "--lignes attend un nombre"; lignes=$2; shift 2 ;;
+            *) sources+=("$1"); shift ;;
+        esac
+    done
+    [ ${#sources[@]} -ge 1 ] || die "usage : vue image <nom> <image[=légende]>… [--lignes N]"
+    for a in "${sources[@]}"; do
+        f=$a; leg=""
+        if [ ! -e "$f" ] && [[ $a == *=* ]]; then f=${a%%=*}; leg=${a#*=}; fi
+        [ -f "$f" ] || die "image introuvable : $f"
+        if dry; then png=$f
+        else
+            [ -n "$dir" ] || dir=$(mktemp -d "${TMPDIR:-/tmp}/vue-image.XXXXXX")
+            png="$dir/$(basename "${f%.*}").png"
+            png_depuis "$f" "$png"
+        fi
+        liste+=("$(q "$png")" "$(q "${leg:-$(basename "$f")}")")
+    done
+    cmd_montrer "$nom" "$(q "$0") _rendre --lignes $lignes ${liste[*]}"
+}
+
+# _rendre : exécuté dans le pane. Légende, puis l'image par le protocole graphique kitty : PNG en base64, par
+# tranches de 4096 octets (a=T affiche aussitôt, r= hauteur en lignes, la largeur suit, m=1 tant qu'il en reste).
+cmd__rendre() {
+    local lignes=18
+    [ "${1:-}" = --lignes ] && { lignes=$2; shift 2; }
+    local png leg b64 len pos chunk more first
+    while [ $# -ge 2 ]; do
+        png=$1; leg=$2; shift 2
+        printf -- '--- %s\n' "$leg"
+        b64=$(base64 -w0 -- "$png"); len=${#b64}; pos=0; first=1
+        while [ "$pos" -lt "$len" ]; do
+            chunk=${b64:$pos:4096}; pos=$((pos + 4096)); more=0; [ "$pos" -lt "$len" ] && more=1
+            if [ "$first" = 1 ]; then printf '\e_Ga=T,f=100,r=%s,m=%s;%s\e\\' "$lignes" "$more" "$chunk"; first=0
+            else printf '\e_Gm=%s;%s\e\\' "$more" "$chunk"; fi
+        done
+        printf '\n\n'
+    done
+}
+
 cmd_etat() {
     [ $# -eq 1 ] || die "usage : vue etat <pane>"
     existe "$1" || { echo "fermé"; return 0; }
@@ -356,11 +419,13 @@ case $c in
     saisir) cmd_saisir "$@" ;;
     lire) cmd_lire "$@" ;;
     montrer) cmd_montrer "$@" ;;
+    image) cmd_image "$@" ;;
+    _rendre) cmd__rendre "$@" ;;
     etat) cmd_etat "$@" ;;
     attendre) cmd_attendre "$@" ;;
     fermer) cmd_fermer "$@" ;;
     secret) cmd_secret "$@" ;;
     nettoyer) cmd_nettoyer "$@" ;;
     --version|version) echo "vue $VERSION" ;;
-    *) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; [ -z "$c" ] || [ "$c" = -h ] || [ "$c" = --help ] || exit 2 ;;
+    *) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; [ -z "$c" ] || [ "$c" = -h ] || [ "$c" = --help ] || exit 2 ;;
 esac

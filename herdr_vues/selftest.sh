@@ -27,6 +27,9 @@ printf '*.key\n' > "$T/.gitignore"
 check "secret ignoré par git : accepté"             "'$V' saisir '$T/ok.key' x --secret"
 out=$("$V" montrer "logs" tail -f /dev/null 2>&1)
 check "montrer : jamais de focus"                   "! grep -q -- '--focus' <<<\"\$out\" && grep -q 'rename .* logs' <<<\"\$out\""
+printf 'png' > "$T/a.png"; out=$("$V" image "photos" "$T/a.png=Une légende" "$T/a.png" 2>&1)
+check "image : pane nommé sans focus, rendu délégué"  "! grep -q -- '--focus' <<<\"\$out\" && grep -q 'rename .* photos' <<<\"\$out\" && grep -q '_rendre --lignes 18 .*a.png Une\\\\ légende .*a.png a.png' <<<\"\$out\""
+check "image : fichier absent refusé"               "! '$V' image photos '$T/absente.jpg'"
 out=$("$V" lire "$T/r.md" --sous "$T/plein" --numeros 2>&1)
 check "lire --sous : deux panes, bas sous haut"     "[ \"\$(grep -c 'pane split' <<<\"\$out\")\" = 2 ] && grep -q -- '--pane w0:p.* --direction down\|--direction down .*--pane' <<<\"\$out\""
 check "lire : confort et numéros"                   "grep -q -- '--softwrap --atblanks --mouse' <<<\"\$out\" && grep -q -- '--linenumbers' <<<\"\$out\""

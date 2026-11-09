@@ -25,6 +25,7 @@ semaines d'usage. Chacun correspond à une sous-commande de `vue` (dans le PATH 
 | **saisir** | l'utilisateur doit **fournir** un contenu : secret, collage d'un résultat obtenu ailleurs, ligne à ajouter dans un fichier | `vue saisir <fichier> "<quoi coller>" [--secret]` | oui : il doit agir |
 | **lire** | l'utilisateur doit **lire ou corriger** un texte long : brouillon, issue, PR, réponse à envoyer, texte + son décodage (s'il va seulement le copier : `cat`, voir § 3) | `vue lire <fichier> [+N] [--numeros] [--sous <fichier2>]` | oui |
 | **montrer** | quelque chose **vit dans le temps** : commande longue, log, `watch`, sous-agent | `vue montrer "<nom>" <commande…>` | **non**, jamais |
+| **montrer une image** | une photo, une capture, un logo **à faire voir** (pas à retoucher) | `vue image "<nom>" <fichier[=légende]>… [--lignes N]` | **non** |
 
 `vue` choisit seul la géométrie (à droite au-dessus de 120 colonnes, en dessous sinon), nomme le pane,
 le lance dans le bon répertoire, et rend son identifiant. Sans herdr ni tmux, elle imprime la ligne
@@ -133,9 +134,21 @@ le 04/11/2026 sur un prompt réécrit). `vue` vérifie maintenant avant d'ouvrir
 
 Après avoir réécrit un fichier déjà affiché, relancer simplement `vue lire` : c'est lui qui rafraîchit.
 
+## 4 ter. Montrer une image
+
+```bash
+vue image "photos Clemence" "envois/1000000-grande.jpg=N 1 : cavalière de dos" envois/1000003-grande.jpg --lignes 16
+```
+
+- Un terminal n'affiche pas d'image, sauf s'il parle un protocole graphique. **herdr laisse passer celui de kitty** (constaté le 09/11/2026 : la photo apparaît dans le pane ; la séquence iTerm2/OSC 1337 ne donne rien ; sixel non testé). `vue image` s'en sert : un pane nommé, sans focus, et pour chaque fichier une ligne de légende puis l'image.
+- Le protocole n'accepte que du PNG : JPEG, WebP, AVIF, HEIC sont convertis à la volée (php-imagick, sinon ImageMagick, sinon Pillow), redressés selon l'EXIF et ramenés à 1200 px de large. Le PNG transite en base64 par tranches de 4096 octets : 1 à 3 s par photo, laisser le temps.
+- `fichier=légende` : la légende remplace le nom du fichier au-dessus de l'image. `--lignes N` : hauteur en lignes de texte (18 par défaut), la largeur suit. Même nom qu'une vue déjà ouverte : elle est réutilisée, comme pour `montrer`.
+- Depuis Bash il n'y a pas de /dev/tty : l'agent ne peut pas demander au terminal ce qu'il sait afficher, c'est l'utilisateur qui dit si l'image apparaît. Sur un terminal inconnu, une petite image d'abord.
+- Hors de portée : retoucher ou comparer finement (ouvrir le fichier sur le poste, ou une page web). Et pas d'image dans le chat ni dans nano : nano ne rend pas le protocole.
+
 ## 5. Ranger
 
-- Les panes nano se ferment seuls. Les vues `montrer` se ferment quand leur sujet est clos ; sur
+- Les panes nano se ferment seuls. Les vues `montrer` et `image` se ferment quand leur sujet est clos ; sur
   « ferme les panes », fermer **les miens** (ceux que `vue` a nommés dans cette session).
 - `vue fermer` refuse un pane où nano est encore ouvert : l'utilisateur n'a peut-être pas enregistré.
   `--force` seulement s'il le demande.
