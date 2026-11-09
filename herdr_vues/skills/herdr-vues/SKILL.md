@@ -10,7 +10,7 @@ description: >
   Aussi sur « montre-moi en entier », « affiche », « ouvre dans nano », « ouvre en pane », « pane
   token », « je veux voir », « surveille », « ferme les panes ». Un texte à copier tel quel (prompt à
   coller ailleurs) : `cat` dans un pane, pas nano. Outil : commande `vue`.
-version: 1.0.2
+version: 1.0.3
 ---
 
 # Vues : saisir, lire, montrer
