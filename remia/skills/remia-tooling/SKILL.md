@@ -7,7 +7,7 @@ description: >
   Déclenche sur toute mention de remia-tooling ou "remia", "mes tools", "mes outils du dépôt",
   "qu'est-ce qui est à jour", "installe <outil du dépôt>", "mets à jour mes outils", "migre cette
   machine", et sur un message [remia-tooling] injecté par un hook.
-version: 1.0.3
+version: 1.1.0
 ---
 
 # remia-tooling
@@ -34,7 +34,7 @@ Les refus mémorisés ne sont rappelés que si l'utilisateur demande tout.
 | État | Sens | Quoi faire |
 |---|---|---|
 | à jour | version installée = version au dépôt | rien |
-| en retard | le dépôt a une version plus récente | `claude plugin update <plugin>@remia-tooling`, effet à la session suivante ; normalement fait seul par la mise à jour automatique |
+| en retard | le dépôt a une version plus récente | rien : le hook de démarrage lance `remia-tooling maj` en arrière-plan (au plus une fois par heure), effet à la session suivante, annoncé en une ligne ; à la main : `claude plugin update <plugin>@remia-tooling` |
 | non installé | jamais installé ici | proposer une fois (§2) |
 | désactivé | installé, coupé dans `/plugin` | ne rien proposer ; nettoyage possible (§5) |
 | installé (voxtunnel) | la version se lit dans un autre dépôt | rien ; l'état de l'application est donné à part |
@@ -54,6 +54,15 @@ tout de suite, pour que le hook de démarrage ne la repose pas :
 | oui | `claude plugin install <plugin>@remia-tooling` (ajouter les `--config` que donne `remia-tooling status --json`, champ `install`), puis `remia-tooling decide <plugin> oui` |
 | non | `remia-tooling decide <plugin> non` |
 | revenir sur un choix | `remia-tooling decide <plugin> oubli` |
+
+**Désinstallé ou désactivé après un « oui »** : le hook le signale une seule fois. Demander confirmation
+en une ligne ; confirmé → `remia-tooling decide <plugin> non` (puis proposer le nettoyage, § 5) et ne
+plus en parler ; erreur → le réinstaller ou le réactiver.
+
+**Mises à jour** : `remia-tooling maj` (lancé par le hook) met à jour les plugins installés et actifs en
+retard, le skill voxtunnel, et le paquet `voxtunnel-server` quand une release plus récente existe et que
+`sudo -n` passe (empreinte sha256 vérifiée ; sinon il le note dans `~/.cache/remia-tooling/maj.log`).
+Au démarrage suivant, le hook annonce les versions changées : le dire en une ligne, sans question.
 
 Un « non » ne bloque rien : si l'utilisateur demande le plugin plus tard, l'installer et passer à `oui`.
 Après une installation, dire que l'effet arrive à la **prochaine session** : les hooks d'un plugin se

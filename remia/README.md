@@ -6,12 +6,17 @@ ajoute ce que `/plugin` ne fait pas :
 - **proposer** au démarrage de session les plugins du dépôt jamais proposés sur cette machine, et
   **mémoriser** les oui/non pour ne pas redemander ;
 - **signaler** les installations d'avant les plugins (faites à la main par `install.sh`) et les migrer ;
+- **mettre à jour** seul les plugins déjà installés (et le paquet `voxtunnel-server`), puis l'annoncer
+  en une ligne au démarrage suivant ;
+- **confirmer une fois** qu'un plugin accepté puis désinstallé ou désactivé l'a été exprès, puis se taire ;
 - **signaler** une mise à jour automatique coupée pour la marketplace ;
 - **refaire le point** dépôt vs local quand l'utilisateur parle de remia-tooling.
 
-Il ne clone et ne télécharge rien : il lit le clone de la marketplace que Claude Code tient à jour
-(`~/.claude/plugins/marketplaces/remia-tooling/`) et `~/.claude/plugins/installed_plugins.json`. Il
-n'installe ni ne met à jour aucun plugin lui-même.
+Il lit le clone de la marketplace que Claude Code tient à jour (`~/.claude/plugins/marketplaces/remia-tooling/`)
+et `~/.claude/plugins/installed_plugins.json`. Il n'installe aucun plugin sans accord. `maj` (lancé en
+arrière-plan par le hook de démarrage, au plus une fois par heure) passe par `claude plugin marketplace update`
+et `claude plugin update`, et télécharge la release `voxtunnel-server` seulement si elle est plus récente
+que le paquet installé ; journal : `~/.cache/remia-tooling/maj.log`.
 
 ## Commande
 
@@ -20,6 +25,7 @@ remia-tooling status [--json]            version au dépôt / installée, état,
 remia-tooling decide <plugin> oui|non|oubli
 remia-tooling migrate [--dry-run] [plugin…]
 remia-tooling path                       dossier du clone de la marketplace
+remia-tooling maj                        mise à jour des plugins installés en retard et de voxtunnel-server
 ```
 
 Dans une session Claude, `remia-tooling` est dans le PATH de l'outil Bash (dossier `bin/` du plugin).
@@ -40,12 +46,13 @@ Hors session : `~/.claude/plugins/marketplaces/remia-tooling/remia/bin/remia-too
 | Fichier | Rôle |
 |---|---|
 | `bin/remia-tooling` | la commande (python3, sans dépendance) |
-| `hooks/hooks.json` | `SessionStart` (propositions) et `UserPromptSubmit` (rappel sur mention, une fois par heure et par session) |
+| `hooks/hooks.json` | `SessionStart` (propositions, mises à jour) et `UserPromptSubmit` (rappel sur mention, une fois par heure et par session) |
 | `skills/remia-tooling/SKILL.md` | la procédure pour l'agent |
 | `selftest.sh` | autotest dans un HOME jetable |
 
 État sur la machine : `~/.config/remia-tooling/decisions.json` (réponses mémorisées),
-`~/.cache/remia-tooling/` (témoins de rappel).
+`~/.config/remia-tooling/versions-vues.json` (versions au dernier démarrage, pour annoncer les mises à jour),
+`~/.cache/remia-tooling/` (témoins de rappel et de `maj`, journal `maj.log`).
 
 ## Versions
 
@@ -54,6 +61,7 @@ montées ensemble (`tests/check.sh` le vérifie).
 
 | Version | Changements |
 |---|---|
+| 1.1.0 | Mise à jour automatique : le hook de démarrage lance `remia-tooling maj` en arrière-plan (plugins installés en retard, skill voxtunnel, paquet `voxtunnel-server` si `sudo -n` passe) et annonce en une ligne les versions changées depuis la session précédente (`~/.config/remia-tooling/versions-vues.json`). Un plugin accepté puis désinstallé ou désactivé est signalé une fois, pour confirmation (`decide … non`). |
 | 1.0.3 | Plugin `herdr-vues` connu de `status` et de `migrate` : l'ancien skill `~/.claude/skills/herdr-montrer/` est signalé et mis de côté. |
 | 1.0.2 | Plugin `markitdown` connu de `status` et de `migrate` : skill copié dans `~/.claude/skills/`, bloc `<!-- markitdown:start` de `CLAUDE.md`. |
 | 1.0.1 | Les commandes d'installation proposées donnent toujours les réglages (`--config target=…`, `--config lang=…`), y compris par défaut : sans cela Claude Code signale une option « not yet set ». |

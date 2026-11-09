@@ -11,11 +11,13 @@
                                          après sauvegarde ; sans nom : tous les plugins concernés
   remia-tooling path                     dossier du clone de la marketplace
   remia-tooling hook                     hooks SessionStart et UserPromptSubmit du plugin (événement sur stdin)
+  remia-tooling maj                      rafraîchit la marketplace, met à jour les plugins installés en retard
+                                         et le paquet voxtunnel-server (lancé en arrière-plan par le hook)
   remia-tooling --version
 
 Ne clone et ne télécharge rien : lit le clone de la marketplace que Claude Code tient à jour et
-~/.claude/plugins/installed_plugins.json. N'installe ni ne met à jour aucun plugin : c'est le travail
-de `/plugin` et de `claude plugin install|update`. Réponses mémorisées :
+~/.claude/plugins/installed_plugins.json. N'installe aucun plugin sans accord ; met à jour ceux déjà installés (`maj`, par
+`claude plugin update`). Réponses mémorisées :
 ~/.config/remia-tooling/decisions.json. Le hook sort toujours en code 0 et se tait s'il n'a rien à dire.
 """
 import json
@@ -26,7 +28,7 @@ import subprocess
 import sys
 import time
 
-VERSION = "1.0.3"
+VERSION = "1.1.0"
 MARKET = "remia-tooling"
 HOME = os.path.expanduser("~")
 CLAUDE = os.environ.get("CLAUDE_CONFIG_DIR") or os.path.join(HOME, ".claude")
@@ -37,7 +39,9 @@ SKILLS = os.path.join(CLAUDE, "skills")
 CONF = os.path.join(HOME, ".config", "remia-tooling")
 CACHE = os.path.join(HOME, ".cache", "remia-tooling")
 DECISIONS = os.path.join(CONF, "decisions.json")
+SEEN = os.path.join(CONF, "versions-vues.json")
 MENTION_EVERY = 3600  # rappel « faire le point » au plus une fois par heure et par session
+MAJ_EVERY = 3600      # mise à jour en arrière-plan au plus une fois par heure
 MENTION = re.compile(r"remia[\s_-]?tooling|\bremia\b", re.I)
 USEC_BLOCK = re.compile(r"\n*<!-- usec:start.*?<!-- usec:end -->\n?", re.DOTALL)
 MARKITDOWN_BLOCK = re.compile(r"\n*<!-- markitdown:start.*?<!-- markitdown:end -->\n?", re.DOTALL)
@@ -426,18 +430,112 @@ def cmd_migrate(args):
 
 
 # ── hooks ─────────────────────────────────────────────────────────────────────────────────
+def updates_since_last_session(rows):
+    """Plugins dont la version installée a changé depuis le dernier démarrage : ["x 1.0.0 → 1.1.0"]."""
+    seen = load_json(SEEN, None)
+    now = {r["plugin"]: r["local"] for r in rows if r["local"]}
+    if deb_version("voxtunnel-server"):
+        now["voxtunnel-server (paquet)"] = deb_version("voxtunnel-server")
+    save_json(SEEN, now)
+    if seen is None:  # premier passage : rien à comparer
+        return []
+    return [f"{p} {seen[p]} → {v}" for p, v in sorted(now.items()) if p in seen and seen[p] != v]
+
+
+def launch_updates():
+    """Lance `remia-tooling maj` en arrière-plan (au plus une fois par heure), sans attendre."""
+    if os.environ.get("REMIA_NO_MAJ") or not shutil.which("claude"):
+        return
+    stamp = os.path.join(CACHE, "maj.stamp")
+    try:
+        if time.time() - os.path.getmtime(stamp) < MAJ_EVERY:
+            return
+    except OSError:
+        pass
+    os.makedirs(CACHE, exist_ok=True)
+    with open(stamp, "a"):
+        os.utime(stamp)
+    with open(os.path.join(CACHE, "maj.log"), "a") as log:
+        subprocess.Popen([sys.executable, os.path.realpath(__file__), "maj"], stdin=subprocess.DEVNULL,
+                         stdout=log, stderr=log, start_new_session=True)
+
+
+def cmd_maj():
+    """Rafraîchit la marketplace puis met à jour les plugins installés, actifs et en retard."""
+    print(time.strftime("── %Y-%m-%d %H:%M:%S maj"), flush=True)
+    subprocess.run(["claude", "plugin", "marketplace", "update", MARKET], timeout=180)
+    for r in status_rows() or []:
+        if r["state"] == "en retard" or (r["state"] == "installé" and r["plugin"] == "voxtunnel"):
+            print(f"{r['plugin']} {r['local']} → {r['repo'] or 'dernière version'}", flush=True)
+            subprocess.run(["claude", "plugin", "update", f"{r['plugin']}@{MARKET}"], timeout=180)
+    maj_voxtunnel_server()
+    return 0
+
+
+def deb_version(pkg):
+    try:
+        r = subprocess.run(["dpkg-query", "-W", "-f=${Status}\t${Version}", pkg], capture_output=True, text=True, timeout=5)
+    except Exception:
+        return ""
+    return r.stdout.split("\t")[-1] if r.returncode == 0 and r.stdout.startswith("install ok installed") else ""
+
+
+def maj_voxtunnel_server():
+    """Paquet voxtunnel-server : installe la dernière release si elle est plus récente (sudo sans mot de passe seulement)."""
+    local = deb_version("voxtunnel-server")
+    if not local:
+        return
+    import hashlib, tempfile, urllib.request
+    try:
+        with urllib.request.urlopen("https://api.github.com/repos/remmmi/voxtunnel/releases/latest", timeout=20) as f:
+            rel = json.load(f)
+    except Exception as e:
+        print(f"voxtunnel-server : release illisible ({e})", flush=True)
+        return
+    asset = next((a for a in rel.get("assets", []) if a["name"].startswith("voxtunnel-server_")), None)
+    latest = (rel.get("tag_name") or "").lstrip("v")
+    if not asset or not latest or not newer(latest, local):
+        return
+    if subprocess.run(["sudo", "-n", "true"], capture_output=True).returncode != 0:
+        print(f"voxtunnel-server {local} → {latest} : sudo demande un mot de passe, mise à jour à faire à la main", flush=True)
+        return
+    d = tempfile.mkdtemp(prefix="voxtunnel-")
+    deb = os.path.join(d, asset["name"])
+    urllib.request.urlretrieve(asset["browser_download_url"], deb)
+    digest = (asset.get("digest") or "").removeprefix("sha256:")
+    with open(deb, "rb") as fh:
+        if digest and hashlib.sha256(fh.read()).hexdigest() != digest:
+            print(f"voxtunnel-server {latest} : empreinte sha256 fausse, rien installé", flush=True)
+            return
+    print(f"voxtunnel-server {local} → {latest}", flush=True)
+    subprocess.run(["sudo", "-n", "apt-get", "install", "-y", "-q", deb, "opus-tools"], timeout=600)
+
+
 def session_notice():
     rows = status_rows()
     if rows is None:
         return ""
+    updated = updates_since_last_session(rows)
+    launch_updates()
     new = [f"{r['plugin']} ({r['desc']})" for r in rows
            if r["state"] == "non installé" and not r["decision"] and not r["legacy"]]
+    gone = [r["plugin"] + (" (désactivé)" if r["state"] == "désactivé" else " (désinstallé)") for r in rows
+            if r["decision"] == "oui" and r["state"] in ("non installé", "désactivé")]
     old = [f"{r['plugin']} ({', '.join(r['legacy'])})" for r in rows
            if r["legacy"] and (r["local"] or r["decision"] != "non")]
     auto = auto_update()
-    if not new and not old and auto:
+    if not new and not gone and not old and not updated and auto:
         return ""
+    if updated and not new and not gone and not old and auto:
+        return ("[remia-tooling] Plugins mis à jour depuis la dernière session : " + " ; ".join(updated) +
+                ". Le dire en UNE seule ligne au début de ta première réponse, sans rien demander.")
     parts = ["[remia-tooling]"]
+    if updated:
+        parts.append("Mis à jour depuis la dernière session (une ligne suffit) : " + " ; ".join(updated) + ".")
+    if gone:
+        parts.append("Acceptés autrefois mais désinstallés ou désactivés depuis : " + " ; ".join(gone) + ". "
+                     "Demander UNE fois confirmation que c'est voulu ; si oui : `remia-tooling decide <plugin> non` "
+                     "(puis proposer le nettoyage, skill § 5) et ne plus en parler ; sinon le réinstaller ou le réactiver.")
     if new:
         parts.append("Plugins de la marketplace jamais proposés sur cette machine : " + " ; ".join(new) + ".")
     if old:
@@ -507,6 +605,8 @@ def main(argv):
         return 0 if root else 1
     if cmd == "hook":
         return cmd_hook()
+    if cmd == "maj":
+        return cmd_maj()
     print(__doc__.strip())
     return 0 if cmd in ("-h", "--help") else 2
 

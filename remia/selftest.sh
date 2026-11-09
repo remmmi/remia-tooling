@@ -7,6 +7,7 @@ T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 ok=0; ko=0
 check() { if eval "$2" >/dev/null 2>&1; then echo "ok  $1"; ok=$((ok+1)); else echo "KO  $1"; ko=$((ko+1)); fi; }
 export HOME="$T/home"; unset CLAUDE_CONFIG_DIR
+export REMIA_NO_MAJ=1  # jamais de `claude plugin update` réel depuis l'autotest
 C="$HOME/.claude"; P="$C/plugins"; M="$P/marketplaces/remia-tooling"
 export REMIA_MARKETPLACE_DIR="$M"
 R="$HERE/bin/remia-tooling"
@@ -42,9 +43,15 @@ check "decide oubli : la proposition revient"     "hk SessionStart | grep -q 'al
 "$R" decide alpha oui >/dev/null; installed remia=1.0.0 alpha=1.0.0
 check "installé et à jour → silence"              "[ -z \"\$(hk SessionStart)\" ] && st \"r['alpha']['state']=='à jour' and r['alpha']['decision']=='oui'\""
 printf '{"name": "alpha", "version": "1.1.0"}\n' > "$M/alpha/.claude-plugin/plugin.json"
-check "status : alpha en retard (mise à jour laissée à Claude Code : hook muet)" "st \"r['alpha']['state']=='en retard' and r['alpha']['repo']=='1.1.0'\" && [ -z \"\$(hk SessionStart)\" ]"
+check "status : alpha en retard (version installée inchangée : hook muet)" "st \"r['alpha']['state']=='en retard' and r['alpha']['repo']=='1.1.0'\" && [ -z \"\$(hk SessionStart)\" ]"
+installed remia=1.0.0 alpha=1.1.0
+check "mise à jour faite depuis la session précédente → une ligne" "hk SessionStart > '$T/maj' ; grep -q 'alpha 1.0.0 → 1.1.0' '$T/maj' && grep -q 'UNE seule ligne' '$T/maj'"
+check "mise à jour déjà annoncée → silence"       "[ -z \"\$(hk SessionStart)\" ]"
 echo '{"model": "x", "enabledPlugins": {"alpha@remia-tooling": false}}' > "$C/settings.json"
 check "status : plugin désactivé"                 "st \"r['alpha']['state']=='désactivé'\""
+check "accepté puis désactivé → confirmation demandée" "hk SessionStart | grep -q 'désinstallés ou désactivés depuis : alpha (désactivé)'"
+"$R" decide alpha non >/dev/null
+check "désactivation confirmée (decide non) → silence" "[ -z \"\$(hk SessionStart)\" ]"
 known ''
 check "mise à jour automatique coupée → signalée" "hk SessionStart | grep -q 'mise à jour automatique de la marketplace remia-tooling est coupée'"
 echo '{"extraKnownMarketplaces": {"remia-tooling": {"source": {"source": "git", "url": "x"}, "autoUpdate": true}}}' > "$C/settings.json"

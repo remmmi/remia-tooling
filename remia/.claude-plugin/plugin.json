@@ -1,6 +1,6 @@
 {
   "name": "remia",
-  "version": "1.0.3",
-  "description": "Le point dépôt vs local de la marketplace remia-tooling : propose les plugins jamais proposés sur cette machine (réponses mémorisées), signale les installations à la main à migrer et une mise à jour automatique coupée.",
+  "version": "1.1.0",
+  "description": "Le point dépôt vs local de la marketplace remia-tooling : propose les plugins jamais proposés sur cette machine (réponses mémorisées), met à jour seul les plugins installés (une ligne au démarrage), confirme une fois les désinstallations, signale les installations à la main à migrer.",
   "author": { "name": "remmmi" }
 }
