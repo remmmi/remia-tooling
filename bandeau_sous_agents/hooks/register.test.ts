@@ -80,3 +80,11 @@ test("l'effort suit le nom du modele : celui du lancement, puis celui des requet
   expect(await texte(/^ ?xhigh$/)).toBe(true)
   expect(await texte(/^ ?low$/)).toBe(false)
 })
+
+test('le nom de l agent porte le modele demande ou herite, et l effort', async ($, on) => {
+  const recus: string[] = []
+  on('agent.spawn', (_, e) => { recus.push((e as { description: string }).description); return { model: 'claude-sonnet-5-5', agentId: 'a7' } })
+  await $.agent.spawn({ prompt: 'x', description: 'T3 Contacts', subagentType: 'general-purpose', model: 'claude-sonnet-5-5', effort: 'high', parentModel: 'claude-fable-5-1' } as never)
+  await $.agent.spawn({ prompt: 'x', description: 'T4 Web', subagentType: 'general-purpose', parentModel: 'claude-fable-5-1' } as never)
+  expect(recus).toEqual(['T3 Contacts · Sonnet 5.5 · high', 'T4 Web · Fable 5.1'])
+})

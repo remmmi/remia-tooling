@@ -44,3 +44,4 @@ puis `/reload-plugins` dans une session ouverte, ou rien dans les suivantes.
 |---|---|
 | 1.0.0 | Première version, sous le nom `modele-agents` : bandeau des sous-agents en cours avec leur modèle, retour d'un agent qui se réveille. |
 | 1.1.0 | Renommé `bandeau-sous-agents` ; l'effort de chaque agent suit le nom du modèle. |
+| 1.2.0 | Le nom affiché de chaque sous-agent (sa description au lancement) est suffixé du modèle demandé ou hérité et de l'effort demandé : `T3 Contacts · Sonnet 5.5 · high`. Déclaratif ; le bandeau reste la vérité. |

@@ -23,7 +23,12 @@ const noteEffort = (all: Record<string, Agent>, id: string, e: string): Record<s
 
 export const register: Register = on => {
   on('agent.spawn', async ($, e, next) => {
-    const res = await next(e)
+    // Le nom affiche de l'agent porte le modele demande (sinon celui du parent) et l'effort du lancement.
+    // Declaratif : le bandeau, lui, montre le modele et l'effort reellement servis.
+    const demande = 'model' in e && typeof e.model === 'string' ? e.model : undefined
+    const parent = 'parentModel' in e && typeof e.parentModel === 'string' ? e.parentModel : undefined
+    const suffixe = [joli(demande ?? parent ?? '?'), effort(e.effort)].filter(Boolean).join(' · ')
+    const res = await next(typeof e.description === 'string' ? { ...e, description: `${e.description} · ${suffixe}` } : e)
     const id = 'agentId' in res ? res.agentId : undefined
     if (id) {
       const agent: Agent = {
