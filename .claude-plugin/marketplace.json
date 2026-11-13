@@ -53,6 +53,11 @@
       "description": "Bandeau au-dessus de la saisie : les sous-agents en cours, leur modèle et leur effort, le modèle en cyan comme dans la status line."
     },
     {
+      "name": "cve-tournee",
+      "source": "./cve_tournee",
+      "description": "Skill cve-tournee : une alerte de sécurité (lien, CVE), tous les VPS joignables en SSH audités en parallèle par leur propre Claude, tableau des verdicts, onglet herdr ouvert sur chaque VPS vulnérable."
+    },
+    {
       "name": "voxtunnel",
       "source": {
         "source": "git-subdir",

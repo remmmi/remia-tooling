@@ -23,8 +23,9 @@ Ce README est la procédure de référence. Pour mettre une machine sur ce syst�
 | `herdr-vues` | skill et commande `vue` : ce que l'utilisateur doit saisir (secrets, collages), lire (brouillons, textes longs) ou voir vivre (logs, commandes longues) s'ouvre dans un pane herdr à côté, pas dans le chat | — | rien (la commande `vue` vient avec le plugin) |
 | `markitdown` | skill d'aiguillage des documents non-markdown (PDF, Word, Excel, PowerPoint…) : source de contenu, le document est converti en Markdown avant lecture ; règle en début de session, commande `to-md` | — | un environnement Python dans `~/.local/share/markitdown/` (350 Mo environ), `to-md` dans `~/.local/bin` |
 | `bandeau-sous-agents` | bandeau au-dessus de la saisie : les sous-agents en cours, leur modèle et leur effort (`Explore·Haiku 5.5 high`), le modèle en cyan comme dans la status line | — | rien |
+| `cve-tournee` | skill et commande `cve-tournee` : une alerte de sécurité (lien, CVE) donnée une fois depuis le poste, chaque VPS joignable en SSH audité par son propre Claude en lecture seule, tableau des verdicts, un onglet herdr ouvert sur chaque VPS vulnérable | — | rien (la commande vient avec le plugin ; rapports dans `~/.cache/cve-tournee/`) |
 
-Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`, `skills/decode/`, `skills/chatroom/`, `markitdown/`, `herdr_vues/`, `bandeau_sous_agents/`).
+Détail de chaque outil : le README de son dossier (`remia/`, `rename_herdr/`, `usec/`, `skills/simple/`, `skills/decode/`, `skills/chatroom/`, `markitdown/`, `herdr_vues/`, `bandeau_sous_agents/`, `cve_tournee/`).
 
 `markitdown` s'installe aussi sans Claude Code, pour tout agent qui sait lancer un script et lire un
 fichier d'instructions : [`markitdown/INSTALL.md`](markitdown/INSTALL.md).

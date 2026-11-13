@@ -1,0 +1,8 @@
+{
+  "name": "cve-tournee",
+  "version": "1.0.0",
+  "description": "Skill cve-tournee et commande du même nom : une alerte de sécurité (lien, CVE, texte), tous les VPS joignables en SSH audités en parallèle par leur propre Claude, un tableau des verdicts, et un onglet herdr ouvert sur chaque VPS vulnérable.",
+  "author": {
+    "name": "remmmi"
+  }
+}
