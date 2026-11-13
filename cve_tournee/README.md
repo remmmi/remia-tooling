@@ -45,6 +45,11 @@ le poste était éteint) et envoie une notification herdr quand un constat Debia
 nouveau. La veille ne lance jamais d'audit toute seule : elle dit « cette version est installée »,
 l'audit par le Claude du VPS dit « et elle est exposée ici ».
 
+`cve-tournee trier` fait le lien entre les deux : il envoie à chaque hôte ses propres constats Debian,
+critiques et hauts, et le Claude de l'hôte les classe en lecture seule, `EXPOSE` (chargé par quelque
+chose de joignable), `HORS_PROD` (tests, build, dépendance de dev, copie non servie) ou `A_VERIFIER`.
+Un constat classé n'est pas retrié ; le rapport suivant porte l'étiquette et met les exposés en tête.
+
 Limites : les images Docker sont listées, pas analysées ; `yarn.lock` et `pnpm-lock.yaml` ne sont pas
 lus ; les failles sans correctif Debian ne sont pas listées. OSV reçoit les noms et versions des paquets
 des lockfiles (préfixes à taire : `~/.config/cve-tournee/osv-ignore`).
@@ -60,6 +65,7 @@ des lockfiles (préfixes à taire : `~/.config/cve-tournee/osv-ignore`).
 | `cve-tournee inventaire [--hosts a,b]` | relevé sans modèle : paquets Debian, état d'apt, images Docker, dépendances |
 | `cve-tournee veille [--hosts a,b] [--sans-inventaire] [--notifier]` | inventaire, croisement Debian et OSV, rapport, nouveautés |
 | `cve-tournee rapport` | chemin du dernier rapport de veille |
+| `cve-tournee trier [--hosts a,b] [--tout] [--model M] [--effort E] [--dry]` | le Claude de chaque hôte classe ses constats : `EXPOSE`, `HORS_PROD`, `A_VERIFIER` |
 | `cve-tournee timer installer\|etat\|retirer` | veille quotidienne par un timer systemd utilisateur |
 
 L'hôte `local` est le poste lui-même : inventorié, veillé, et audité s'il a `claude`.
@@ -90,7 +96,7 @@ Verdicts : `VULNERABLE`, `INCERTAIN` (le Claude distant n'a pas pu trancher), `E
 | `~/.config/cve-tournee/osv-ignore` | préfixes de paquets à ne pas envoyer à OSV (facultatif) |
 | `~/.config/systemd/user/cve-tournee-veille.{service,timer}` | posés par `timer installer`, retirés par `timer retirer` |
 | `~/.cache/cve-tournee/inventaire/<hote>.json` | dernier inventaire de chaque hôte |
-| `~/.cache/cve-tournee/veille/` | `rapport.md`, `constats.json`, `vus.json` (ce qui est déjà connu) |
+| `~/.cache/cve-tournee/veille/` | `rapport.md`, `constats.json`, `vus.json` (ce qui est déjà connu), `tri.json` (classes) et `tri-<hote>.md` (réponse du Claude de l'hôte) |
 | `~/.cache/cve-tournee/debian-tracker.json`, `osv/` | caches des deux sources (tracker : 90 Mo, rafraîchi après 20 h) |
 | `~/.cache/cve-tournee/briefs/` | les briefs |
 | `~/.cache/cve-tournee/<run>/` | `brief.md`, `<hote>.md` (rapport), `<hote>.json` (sortie brute), `resultats.json` |
@@ -117,5 +123,6 @@ lancée quand un quota hebdomadaire a franchi son seuil.
 
 | Version | Changement |
 |---|---|
+| 1.2.0 | `trier` : le Claude de chaque hôte classe ses constats de veille (Debian, critiques, hauts) en `EXPOSE`, `HORS_PROD` ou `A_VERIFIER`, en lecture seule ; classes mémorisées et reportées dans le rapport de veille. |
 | 1.1.0 | Veille sans modèle : `inventaire`, `veille` (Debian Security Tracker et OSV.dev, nouveautés depuis la veille précédente), `rapport`, `timer` (systemd utilisateur, notification herdr). Hôte `local` : le poste est inventorié, veillé et audité comme un VPS. |
 | 1.0.0 | Première version : recensement automatique, audit parallèle en lecture seule (Opus, effort medium), tableau, onglet herdr en ssh simple avec session neuve dans `~` et reprise après coupure. |

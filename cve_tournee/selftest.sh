@@ -98,6 +98,15 @@ mien = {tuple(p[:3]) for p in _j.loads(tampon.getvalue())["paquets"] if p[3].sta
 check("collecteur : composer, npm (portee et imbrique), requirements epingles ; node_modules et versions non numeriques ecartes",
       lambda: mien == {("Packagist", "a/b", "1.2.3"), ("npm", "@s/p", "2.0.0"), ("npm", "b", "3.1.0"),
                        ("PyPI", "requests", "2.31.0"), ("PyPI", "uvicorn", "0.30.1")})
+t = ct.lire_tri("Projets...\nTRI: 1 | EXPOSE | site servi\n**TRI: 2 | HORS_PROD | tests**\nTRI: 3 | BIZARRE | x\nblabla")
+check("tri : lignes lues, gras tolere, classe inconnue = A_VERIFIER",
+      lambda: t == {1: ("EXPOSE", "site servi"), 2: ("HORS_PROD", "tests"), 3: ("A_VERIFIER", "x")})
+cs = [{"hote": "h", "type": "osv", "gravite": g, "paquet": p, "cle": p} for g, p in (("LOW", "a"), ("HIGH", "b"), ("CRITICAL", "c"))]
+cs += [{"hote": "h", "type": "debian", "gravite": "low", "paquet": "d", "cle": "d"}, {"hote": "x", "type": "debian", "gravite": "low", "paquet": "e", "cle": "e"}]
+check("tri : Debian puis critique puis haut de l'hote seul ; bas ecartes ; deja classes sautes sauf --tout",
+      lambda: [c["paquet"] for c in ct.a_trier(cs, "h", {})] == ["d", "c", "b"]
+      and [c["paquet"] for c in ct.a_trier(cs, "h", {"c": {}})] == ["d", "b"]
+      and len(ct.a_trier(cs, "h", {"c": {}}, tout=True)) == 3)
 o = ct.outils()
 check("outils : lecture seule (ni Edit, ni Write, ni Bash nu), regles en plus lues",
       lambda: "Bash(pm2 list:*)" in o and not {"Edit", "Write", "Bash", "Bash(*)"} & set(o)

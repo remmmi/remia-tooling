@@ -1,7 +1,7 @@
 {
   "name": "cve-tournee",
-  "version": "1.1.0",
-  "description": "Skill cve-tournee et commande du même nom : une alerte de sécurité (lien, CVE, texte), tous les VPS joignables en SSH audités en parallèle par leur propre Claude, un tableau des verdicts, et un onglet herdr ouvert sur chaque VPS vulnérable. Veille quotidienne sans modèle : inventaire des VPS et du poste, croisé avec le Debian Security Tracker et OSV.dev.",
+  "version": "1.2.0",
+  "description": "Skill cve-tournee et commande du même nom : une alerte de sécurité (lien, CVE, texte), tous les VPS joignables en SSH audités en parallèle par leur propre Claude, un tableau des verdicts, et un onglet herdr ouvert sur chaque VPS vulnérable. Veille quotidienne sans modèle : inventaire des VPS et du poste, croisé avec le Debian Security Tracker et OSV.dev, puis tri des constats par le Claude de chaque hôte.",
   "author": {
     "name": "remmmi"
   }
