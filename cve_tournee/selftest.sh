@@ -61,6 +61,43 @@ check("verdict : gras markdown et accent toleres",
       lambda: ct.lire_verdict("**VERDICT: NON_CONCERNÉ | rien | absent**")[0] == "NON_CONCERNE")
 check("verdict : absent ou inconnu = INCERTAIN",
       lambda: ct.lire_verdict("tout va bien")[0] == ct.lire_verdict("VERDICT: PEUT_ETRE | x | y")[0] == "INCERTAIN")
+check("versions Debian : ~ avant tout, epoque, revision, nombres",
+      lambda: [ct.cmp_debian(a, b) for a, b in (("1.0~rc1", "1.0"), ("1.9", "1.10"), ("1:0.1", "9.9"),
+               ("2.4.68-1~deb13u1", "2.4.71-1~deb13u1"), ("1.0-1", "1.0-1"), ("1.0-1+b1", "1.0-1"))] == [-1, -1, 1, -1, 0, 1])
+inv = {"hote": "h", "os": {"id": "debian", "version_codename": "trixie"},
+       "dpkg": [["apache2-bin", "2.4.68-1", "apache2", "2.4.68-1"], ["nginx", "1.26.3-3", "nginx", "1.26.3-3"]]}
+tr = {"apache2": {"CVE-1": {"releases": {"trixie": {"status": "resolved", "fixed_version": "2.4.71-1", "urgency": "high"}}},
+                  "CVE-2": {"releases": {"trixie": {"status": "open", "urgency": "low"}}},
+                  "CVE-3": {"releases": {"bookworm": {"status": "resolved", "fixed_version": "9", "urgency": "high"}}}},
+      "nginx": {"CVE-4": {"releases": {"trixie": {"status": "resolved", "fixed_version": "1.26.0-1", "urgency": "high"}}}}}
+c = ct.constats_debian(inv, tr)
+check("Debian : seul le paquet sous la version corrigee de SA distribution ressort",
+      lambda: len(c) == 1 and c[0]["paquet"] == "apache2" and c[0]["ids"] == ["CVE-1"] and c[0]["corrige"] == "2.4.71-1")
+check("Debian : hote non Debian saute", lambda: ct.constats_debian(dict(inv, os={"id": "ubuntu"}), tr) == [])
+check("etat apt : mises a jour automatiques inactives et redemarrage signales",
+      lambda: len(ct.etat_apt(dict(inv, apt={"maj_auto": False, "age_listes_h": 2, "redemarrage": True, "securite": []}))) == 2
+      and ct.etat_apt(dict(inv, apt={"maj_auto": True, "age_listes_h": 2, "redemarrage": False, "securite": []})) == [])
+vu = []
+def faux_osv(url, corps):
+    vu.append(corps)
+    return {"results": [{"vulns": [{"id": "GHSA-x"}]} if q["package"]["name"] == "lodash" else {} for q in corps["queries"]]}
+r = ct.osv_ids({("npm", "lodash", "4.17.0"), ("npm", "left-pad", "1.3.0")}, poste=faux_osv)
+check("OSV : une requete par lot, seuls les paquets touches rendus",
+      lambda: r == {("npm", "lodash", "4.17.0"): ["GHSA-x"]} and len(vu) == 1 and len(vu[0]["queries"]) == 2)
+import io, contextlib, json as _j, os as _o
+_o.makedirs(_o.path.expanduser("~/projet/sous"), exist_ok=True)
+_o.makedirs(_o.path.expanduser("~/projet/node_modules/x"), exist_ok=True)
+open(_o.path.expanduser("~/projet/composer.lock"), "w").write(_j.dumps({"packages": [{"name": "a/b", "version": "v1.2.3"}], "packages-dev": [{"name": "c/d", "version": "dev-main"}]}))
+open(_o.path.expanduser("~/projet/sous/package-lock.json"), "w").write(_j.dumps({"packages": {"": {"name": "racine", "version": "1.0.0"}, "node_modules/@s/p": {"version": "2.0.0"}, "node_modules/a/node_modules/b": {"version": "3.1.0"}}}))
+open(_o.path.expanduser("~/projet/node_modules/x/package-lock.json"), "w").write(_j.dumps({"packages": {"node_modules/cache": {"version": "9.9.9"}}}))
+open(_o.path.expanduser("~/projet/requirements.txt"), "w").write("requests==2.31.0\nflask>=2\nuvicorn[standard]==0.30.1 ; python_version > '3.8'\n")
+tampon = io.StringIO()
+with contextlib.redirect_stdout(tampon):
+    exec(ct.COLLECTEUR, {"__name__": "collecteur"})
+mien = {tuple(p[:3]) for p in _j.loads(tampon.getvalue())["paquets"] if p[3].startswith(_o.path.expanduser("~/projet"))}
+check("collecteur : composer, npm (portee et imbrique), requirements epingles ; node_modules et versions non numeriques ecartes",
+      lambda: mien == {("Packagist", "a/b", "1.2.3"), ("npm", "@s/p", "2.0.0"), ("npm", "b", "3.1.0"),
+                       ("PyPI", "requests", "2.31.0"), ("PyPI", "uvicorn", "0.30.1")})
 o = ct.outils()
 check("outils : lecture seule (ni Edit, ni Write, ni Bash nu), regles en plus lues",
       lambda: "Bash(pm2 list:*)" in o and not {"Edit", "Write", "Bash", "Bash(*)"} & set(o)
