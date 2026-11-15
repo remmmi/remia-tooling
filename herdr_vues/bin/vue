@@ -9,6 +9,9 @@
 #                                                     réutilise le pane <nom> s'il existe
 #   vue image <nom> <image[=légende]>… [--lignes N]   images dans un pane nommé (protocole graphique kitty,
 #                                                     que herdr laisse passer) ; converties en PNG, 1200 px max
+#   vue question <sujet> <brief> [--modele opus|sonnet] [--parent <nom>] [--espace <id>] [--cwd <dir>]
+#                                                     onglet herdr q-<sujet>, sans focus : une session Claude
+#                                                     y pose la question du brief (skill tab-question)
 #   vue etat <pane>                                   « nano ouvert », « shell », « occupé : <prog> » ou « fermé »
 #   vue attendre <pane> [secondes]                    rend la main quand le pane est fermé (défaut 1800 s)
 #   vue fermer <pane> [--force]                       refuse si nano y est encore ouvert
@@ -22,7 +25,7 @@
 # commandes herdr/tmux au lieu de les lancer (autotest).
 set -euo pipefail
 
-VERSION="1.0.3"
+VERSION="1.1.0"
 NANO_LIRE=(--softwrap --atblanks --mouse --indicator --smarthome --zap --minibar --stateflags)
 NANO_SAISIR=(--softwrap --atblanks --mouse)
 
@@ -344,6 +347,51 @@ cmd__rendre() {
     done
 }
 
+# vue question : le brief de l'agent, suivi de la façon de travailler commune (consigne.md, {{PARENT}} remplacé),
+# devient le premier message d'une session Claude lancée dans un onglet neuf. Le parent par défaut est le libellé
+# de l'onglet courant : c'est le nom auquel la session lui écrira (SendMessage).
+cmd_question() {
+    local usage="usage : vue question <sujet> <brief> [--modele opus|sonnet] [--parent <nom>] [--espace <id>] [--cwd <dir>]"
+    [ $# -ge 2 ] || die "$usage"
+    local sujet=$1 brief=$2; shift 2
+    local modele=opus parent="" espace=${HERDR_WORKSPACE_ID:-} cwd=$PWD
+    while [ $# -gt 0 ]; do
+        [ $# -ge 2 ] || die "$1 attend une valeur"
+        case $1 in
+            --modele) modele=$2 ;; --parent) parent=$2 ;; --espace) espace=$2 ;; --cwd) cwd=$2 ;;
+            *) die "$usage" ;;
+        esac
+        shift 2
+    done
+    [[ $sujet =~ ^[a-z0-9-]+$ ]] || die "sujet : minuscules, chiffres et tirets (il nomme l'onglet et la session)"
+    [ -s "$brief" ] || die "brief vide ou absent : $brief"
+    case $modele in opus|sonnet) ;; *) die "--modele : opus ou sonnet" ;; esac
+    [ -d "$cwd" ] || die "--cwd : répertoire absent : $cwd"
+    local label="q-$sujet"
+    if ! dry; then
+        [ "$(backend)" = herdr ] || die "onglet-question : herdr seulement ; sinon, poser la question dans le chat (AskUserQuestion)"
+        [ -n "$parent" ] || parent=$(herdr tab get "${HERDR_TAB_ID:-}" 2>/dev/null | jq -r '.result.tab.label // ""')
+        local deja; deja=$(herdr tab list --workspace "$espace" | jq -r --arg l "$label" '.result.tabs[] | select(.label==$l) | .tab_id' | head -n 1)
+        [ -z "$deja" ] || die "l'onglet $label existe déjà ($deja) : lui écrire (SendMessage) plutôt qu'en ouvrir un second"
+    fi
+    [[ $parent =~ ^[A-Za-z0-9._-]+$ ]] || die "--parent : le nom de ta session, tel que les autres le voient (lettres, chiffres, . _ -)"
+    local consigne; consigne="$(dirname "$(readlink -f "$0")")/../skills/tab-question/consigne.md"
+    [ -f "$consigne" ] || die "consigne introuvable : $consigne"
+    local dir="${TMPDIR:-/tmp}/vue-question"; mkdir -p "$dir"
+    local f="$dir/$label.md"
+    { cat -- "$brief"; sed "s/{{PARENT}}/$parent/g" "$consigne"; } > "$f"
+    local pane
+    if dry; then echo "herdr tab create --workspace $espace --cwd $cwd --label $label --no-focus" >&2; pane="w0:p${RANDOM}"
+    else
+        pane=$(herdr tab create --workspace "$espace" --cwd "$cwd" --label "$label" --no-focus \
+               --env CLAUDE_CODE_CHILD_SESSION= | jq -r '.result.root_pane.pane_id // ""')
+        [ -n "$pane" ] || die "herdr tab create n'a pas rendu de pane"
+    fi
+    # L'unset double le --env : un serveur herdr lancé depuis un shell Claude transmettrait la variable, et la session ne sauverait rien.
+    run "$pane" "unset CLAUDE_CODE_CHILD_SESSION; claude --model $modele -n $label \"\$(cat $(q "$f"))\""
+    echo "$pane"
+}
+
 cmd_etat() {
     [ $# -eq 1 ] || die "usage : vue etat <pane>"
     existe "$1" || { echo "fermé"; return 0; }
@@ -420,6 +468,7 @@ case $c in
     lire) cmd_lire "$@" ;;
     montrer) cmd_montrer "$@" ;;
     image) cmd_image "$@" ;;
+    question) cmd_question "$@" ;;
     _rendre) cmd__rendre "$@" ;;
     etat) cmd_etat "$@" ;;
     attendre) cmd_attendre "$@" ;;
@@ -427,5 +476,5 @@ case $c in
     secret) cmd_secret "$@" ;;
     nettoyer) cmd_nettoyer "$@" ;;
     --version|version) echo "vue $VERSION" ;;
-    *) sed -n '2,19p' "$0" | sed 's/^# \{0,1\}//'; [ -z "$c" ] || [ "$c" = -h ] || [ "$c" = --help ] || exit 2 ;;
+    *) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; [ -z "$c" ] || [ "$c" = -h ] || [ "$c" = --help ] || exit 2 ;;
 esac

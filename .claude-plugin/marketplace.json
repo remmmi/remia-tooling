@@ -40,7 +40,7 @@
     {
       "name": "herdr-vues",
       "source": "./herdr_vues",
-      "description": "Skill herdr-vues et commande vue : secrets et collages saisis dans un pane nano, textes longs lus dans nano confortable, logs et commandes longues montrés dans une vue nommée, au lieu du chat."
+      "description": "Skill herdr-vues et commande vue : secrets et collages saisis dans un pane nano, textes longs lus dans nano confortable, logs et commandes longues montrés dans une vue nommée, au lieu du chat ; questions à trancher posées par une session dans un onglet herdr (tab-question)."
     },
     {
       "name": "markitdown",

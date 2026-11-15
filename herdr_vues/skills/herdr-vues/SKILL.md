@@ -10,7 +10,7 @@ description: >
   Aussi sur « montre-moi en entier », « affiche », « ouvre dans nano », « ouvre en pane », « pane
   token », « je veux voir », « surveille », « ferme les panes ». Un texte à copier tel quel (prompt à
   coller ailleurs) : `cat` dans un pane, pas nano. Outil : commande `vue`.
-version: 1.0.3
+version: 1.1.0
 ---
 
 # Vues : saisir, lire, montrer
@@ -156,6 +156,8 @@ vue image "photos Clemence" "envois/1000000-grande.jpg=N 1 : cavalière de dos" 
 
 ## 6. Hors du périmètre de `vue`
 
+- **Une décision à faire trancher à part** (plusieurs questions ouvertes, ou une qui demande d'enquêter ou
+  d'agir) : skill `tab-question`, commande `vue question`.
 - **Une session Claude dans un pane ou un onglet** : skill `fk`. « Pas un pane, un tab » se respecte à
   la lettre. `herdr tab create … --focus` rend le pane sous `.result.root_pane.pane_id`, pas sous
   `.result.pane.pane_id`.

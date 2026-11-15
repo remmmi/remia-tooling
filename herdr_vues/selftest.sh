@@ -38,6 +38,14 @@ check "secret : longueur et espace signalés"        "grep -q 'TOKEN = 7 car. �
 check "secret : contenu jamais affiché"             "! grep -q 'abc' <<<\"\$out\""
 "$V" nettoyer "$T/sec"
 check "nettoyer : consigne retirée, reste gardé"    "[ \"\$(cat '$T/sec')\" = 'TOKEN=abc def' ]"
+printf 'Question : faut-il ?\n' > "$T/brief.md"
+out=$(TMPDIR="$T" "$V" question essai "$T/brief.md" --parent jmjuge --modele sonnet 2>&1); Q="$T/vue-question/q-essai.md"
+check "question : onglet q-<sujet> sans focus"      "grep -q 'tab create .*--label q-essai --no-focus' <<<\"\$out\""
+check "question : session nommée, modèle passé"     "grep -q 'unset CLAUDE_CODE_CHILD_SESSION; claude --model sonnet -n q-essai' <<<\"\$out\""
+check "question : brief puis consigne, parent mis"  "head -n 1 '$Q' | grep -q '^Question : faut-il' && grep -q 'to: \"jmjuge\"' '$Q' && ! grep -q '{{PARENT}}' '$Q'"
+check "question : sujet invalide refusé"            "! TMPDIR='$T' '$V' question 'Mon Sujet' '$T/brief.md' --parent p"
+check "question : modèle inconnu refusé"            "! TMPDIR='$T' '$V' question essai '$T/brief.md' --parent p --modele haiku"
+check "question : brief absent refusé"              "! TMPDIR='$T' '$V' question essai '$T/absent.md' --parent p"
 unset VUE_DRY; out=$(env -u HERDR_ENV -u TMUX "$V" lire "$T/plein" 2>/dev/null); rc=$?
 check "sans multiplexeur : ligne ! nano, code 3"    "[ $rc = 3 ] && grep -q '^! nano ' <<<\"\$out\""
 

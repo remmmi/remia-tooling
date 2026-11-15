@@ -26,6 +26,7 @@ Le skill est écrit à partir de deux semaines d'usage réel (3 → 17 octobre 2
 | `vue lire <fichier> [+N] [--numeros] [--sous <fichier2>]` | nano confortable (retour à la ligne, souris) ; `--sous` : original en haut, second texte en dessous ; couleurs de `decode` pour `*-traduit.md` |
 | `vue montrer <nom> <commande…>` | commande dans un pane nommé, sans prendre le focus ; réutilise le pane du même nom |
 | `vue image <nom> <image[=légende]>… [--lignes N]` | images dans un pane nommé, par le protocole graphique kitty que herdr laisse passer ; JPEG/WebP/AVIF/HEIC convertis en PNG, 1200 px max, légende au-dessus |
+| `vue question <sujet> <brief> [--modele opus\|sonnet] [--parent <nom>] [--espace <id>] [--cwd <dir>]` | onglet `q-<sujet>` sans focus : une session Claude reçoit le brief suivi de `skills/tab-question/consigne.md`, pose la question à l'utilisateur, applique, vérifie et rend compte au parent (par défaut le libellé de l'onglet courant) ; refuse un second onglet du même sujet ; herdr seulement |
 | `vue etat <pane>` | `nano ouvert`, `shell`, `occupé : <prog>` ou `fermé` |
 | `vue attendre <pane> [s]` | rend la main quand le pane est fermé (à lancer en arrière-plan) |
 | `vue fermer <pane> [--force]` | refuse si nano est encore ouvert |
@@ -50,6 +51,8 @@ Ancien skill `~/.claude/skills/herdr-montrer/` : `remia-tooling migrate herdr-vu
 |---|---|
 | `.claude-plugin/plugin.json` | le plugin (nom, version) |
 | `skills/herdr-vues/SKILL.md` | le skill : quand ouvrir quoi, comment attendre, vérifier, ranger ; pièges herdr constatés |
+| `skills/tab-question/SKILL.md` | le skill du parent : quand ouvrir un onglet-question, le brief, lancer, vérifier et fermer |
+| `skills/tab-question/consigne.md` | la façon de travailler ajoutée au brief : autonomie, registre simple, compte rendu, attente |
 | `bin/vue` | la commande |
 | `selftest.sh` | autotest à blanc (`VUE_DRY=1`) : géométrie, focus, droits d'un secret, refus git, consigne, empreinte, délégation de `image` |
 
@@ -57,6 +60,7 @@ Ancien skill `~/.claude/skills/herdr-montrer/` : `remia-tooling migrate herdr-vu
 
 | Version | Changement |
 |---|---|
+| 1.1.0 | Skill `tab-question` et `vue question` : une décision à faire trancher part dans un onglet herdr où une session Claude enquête, la pose dans le registre simple, l'applique, vérifie et rend compte au parent, qui vérifie et ferme. Règles décidées par l'utilisateur le 15/11/2026, après un premier usage à la main (3 questions, 3 onglets). |
 | 1.0.3 | `vue image` : photos, captures et logos affichés dans un pane par le protocole graphique kitty (herdr le rend, constaté le 09/11/2026 ; iTerm2/OSC 1337 non), conversion PNG et réduction à 1200 px, légende par fichier ; skill § 4 ter. |
 | 1.0.2 | Skill : un texte à copier tel quel s'affiche par `cat` dans un pane (`vue montrer`), pas dans nano ; aucun changement de la commande `vue` hors numéro de version. |
 | 1.0.1 | Un seul nano par fichier : `lire` referme le pane précédent (ou refuse s'il a des modifications), `saisir` refuse ; détection par /proc et par le nom du pane. |
