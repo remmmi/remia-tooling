@@ -6,7 +6,7 @@ description: >
   serait noyée parmi les autres ou bloquerait la session. Aussi sur « ouvre un tab qui me demande »,
   « tab-question », « onglet-question », « une session par question », « fais-moi demander à part ».
   Pas pour un choix simple sans suite : AskUserQuestion dans le chat. Exige herdr.
-version: 1.1.0
+version: 1.1.1
 ---
 
 # Onglet-question : une décision, une session, un onglet

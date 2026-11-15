@@ -60,6 +60,7 @@ Ancien skill `~/.claude/skills/herdr-montrer/` : `remia-tooling migrate herdr-vu
 
 | Version | Changement |
 |---|---|
+| 1.1.1 | Consigne de l'onglet-question : un geste qui sort de la machine part aussi quand le CLAUDE.md ou la mémoire l'autorisent déjà (cité dans le compte rendu) ; constaté au premier usage réel le 15/11/2026 (un push autorisé par la mémoire laissé au parent). Décision de l'utilisateur le 15/11. |
 | 1.1.0 | Skill `tab-question` et `vue question` : une décision à faire trancher part dans un onglet herdr où une session Claude enquête, la pose dans le registre simple, l'applique, vérifie et rend compte au parent, qui vérifie et ferme. Règles décidées par l'utilisateur le 15/11/2026, après un premier usage à la main (3 questions, 3 onglets). |
 | 1.0.3 | `vue image` : photos, captures et logos affichés dans un pane par le protocole graphique kitty (herdr le rend, constaté le 09/11/2026 ; iTerm2/OSC 1337 non), conversion PNG et réduction à 1200 px, légende par fichier ; skill § 4 ter. |
 | 1.0.2 | Skill : un texte à copier tel quel s'affiche par `cat` dans un pane (`vue montrer`), pas dans nano ; aucun changement de la commande `vue` hors numéro de version. |
