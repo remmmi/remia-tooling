@@ -8,7 +8,7 @@
 #   vue montrer <nom> <commande…>                     commande dans un pane nommé, sans prendre le focus ;
 #                                                     réutilise le pane <nom> s'il existe
 #   vue copier <fichier|-> [--lignes A-B] [--garder]  met le texte dans le presse-papier du poste de l'utilisateur
-#                                                     (séquence OSC 52, que herdr laisse passer) ; « - » lit l'entrée
+#                                                     (séquence OSC 52 écrite dans le terminal de la session) ; « - » lit l'entrée
 #   vue image <nom> <image[=légende]>… [--lignes N]   images dans un pane nommé (protocole graphique kitty,
 #                                                     que herdr laisse passer) ; converties en PNG, 1200 px max
 #   vue question <sujet> <brief> [--modele opus|sonnet] [--parent <nom>] [--espace <id>] [--cwd <dir>]
@@ -27,7 +27,7 @@
 # commandes herdr/tmux au lieu de les lancer (autotest).
 set -euo pipefail
 
-VERSION="1.2.0"
+VERSION="1.2.1"
 NANO_LIRE=(--softwrap --atblanks --mouse --indicator --smarthome --zap --minibar --stateflags)
 NANO_SAISIR=(--softwrap --atblanks --mouse)
 
@@ -289,9 +289,21 @@ cmd_montrer() {
 }
 
 # Le presse-papier du poste de l'utilisateur, par la séquence OSC 52 : le terminal qui affiche herdr copie le texte.
-# Constaté le 25/11/2026 : herdr laisse passer la séquence émise dans un pane (un agent n'a pas de terminal à lui :
-# elle part donc d'un pane éphémère, sans focus, refermé aussitôt ; --garder le laisse ouvert avec le texte affiché).
+# Constaté le 25/11/2026 : herdr laisse passer la séquence. Un agent n'a pas de terminal à lui, mais la session qui le
+# porte en a un : on y écrit directement (rien ne s'affiche, aucun pane). Sans terminal trouvé, la séquence part d'un pane
+# éphémère, sans focus, refermé aussitôt. --garder ouvre toujours le pane « presse-papier » avec le texte affiché.
 COPIER_MAX=60000   # octets : au-delà, les terminaux tronquent ou refusent la séquence
+# Le terminal de la session : celui du premier processus parent qui en a un (le pane où tourne l'agent).
+terminal_session() {
+    local pid=$$ t
+    while [ "${pid:-1}" -gt 1 ]; do
+        t=$(ps -o tty= -p "$pid" 2>/dev/null | tr -d ' ')
+        case $t in pts/*|tty*) [ -w "/dev/$t" ] && { echo "/dev/$t"; return 0; } ;; esac
+        pid=$(ps -o ppid= -p "$pid" 2>/dev/null | tr -d ' ')
+    done
+    return 1
+}
+
 cmd_copier() {
     local usage='usage : vue copier <fichier|-> [--lignes A-B] [--garder]'
     local f="" lignes="" garder=0
@@ -316,7 +328,16 @@ cmd_copier() {
     local octets nl; octets=$(wc -c < "$t"); nl=$(wc -l < "$t")
     [ "$octets" -gt 0 ] || { rm -f "$t"; die "rien à copier (texte vide, ou lignes hors du fichier)"; }
     [ "$octets" -le "$COPIER_MAX" ] || { rm -f "$t"; die "$octets octets : trop long pour le presse-papier (plafond $COPIER_MAX). Montrer le fichier à la place : vue montrer <nom> cat <fichier>"; }
-    [ "$(backend)" = aucun ] && ! dry && { rm -f "$t"; die "ni herdr ni tmux : pas de terminal par où atteindre le presse-papier ; donner le texte dans le message"; }
+    # Voie directe : écrire la séquence dans le terminal de la session, sans ouvrir de pane.
+    if [ "$garder" = 0 ]; then
+        local tty=""
+        if dry; then echo "printf OSC ]52;c;<base64> > <terminal de la session>" >&2; rm -f "$t"; echo "copié dans le presse-papier : $nl ligne(s), $octets octets"; return 0; fi
+        if tty=$(terminal_session); then
+            printf '\033]52;c;%s\a' "$(base64 -w0 "$t")" > "$tty"; rm -f "$t"
+            echo "copié dans le presse-papier : $nl ligne(s), $octets octets"; return 0
+        fi
+    fi
+    [ "$(backend)" = aucun ] && ! dry && { rm -f "$t"; die "ni terminal de session, ni herdr, ni tmux : pas de chemin vers le presse-papier ; donner le texte dans le message"; }
     local id; id=$(split "$(direction)" 0)
     nommer "$id" "presse-papier"
     # Le pane émet la séquence, efface le fichier de passage, puis montre le texte (--garder) ou se referme.

@@ -27,7 +27,9 @@ printf '*.key\n' > "$T/.gitignore"
 check "secret ignoré par git : accepté"             "'$V' saisir '$T/ok.key' x --secret"
 out=$("$V" montrer "logs" tail -f /dev/null 2>&1)
 outc=$(printf 'un\ndeux\ntrois\n' | "$V" copier - --lignes 2-3 2>&1)
-check "copier : sans focus, OSC 52, compte sans contenu" "! grep -q -- '--focus' <<<\"\$outc\" && grep -q '52;c;' <<<\"\$outc\" && grep -q '2 ligne(s), 11 octets' <<<\"\$outc\" && ! grep -q deux <<<\"\$outc\""
+check "copier : aucun pane, OSC 52, compte sans contenu" "! grep -q 'pane split' <<<\"\$outc\" && grep -q '52;c;' <<<\"\$outc\" && grep -q '2 ligne(s), 11 octets' <<<\"\$outc\" && ! grep -q deux <<<\"\$outc\""
+outg=$(printf 'un\n' | "$V" copier - --garder 2>&1)
+check "copier --garder : pane presse-papier, sans focus" "grep -q 'rename .* presse-papier' <<<\"\$outg\" && ! grep -q -- '--focus' <<<\"\$outg\""
 check "copier : un secret est refusé"                "! '$V' copier \"\$HOME/.secrets/absent-pour-le-test\""
 check "montrer : jamais de focus"                   "! grep -q -- '--focus' <<<\"\$out\" && grep -q 'rename .* logs' <<<\"\$out\""
 printf 'png' > "$T/a.png"; out=$("$V" image "photos" "$T/a.png=Une légende" "$T/a.png" 2>&1)

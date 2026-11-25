@@ -12,7 +12,7 @@ description: >
   COPIER un fichier, un texte ou un passage sans dire où (« copie-moi ça », « mets-le dans le
   presse-papier », « donne-moi la liste à coller ») : `vue copier` le met dans son presse-papier.
   Un texte à copier qu'il veut aussi voir : `vue copier --garder`. Outil : commande `vue`.
-version: 1.2.0
+version: 1.2.1
 ---
 
 # Vues : saisir, lire, montrer
@@ -164,10 +164,11 @@ vue copier notes.md --garder                   # copié, et laissé à l'écran 
   d'un fichier, d'un texte ou d'une portion, **sans nommer de destination**, c'est le presse-papier de son poste.
   Pas un bloc dans le chat, pas un `cat` dans un pane : il n'a alors plus qu'à coller. S'il nomme une destination
   (un fichier, un brouillon, un pane), on écrit là.
-- Comment ça marche : `vue` émet la séquence OSC 52 depuis un pane éphémère, sans focus, refermé en moins d'une seconde ;
-  herdr la laisse passer et le terminal du poste copie le texte (constaté le 25/11/2026). Depuis Bash il n'y a pas de
-  terminal : l'agent ne peut pas relire le presse-papier, c'est l'utilisateur qui dit si le texte est arrivé. Sur un
-  poste ou un terminal nouveau, le demander la première fois.
+- Comment ça marche : `vue` écrit la séquence OSC 52 dans le terminal de la session (celui du pane où tourne l'agent) ;
+  herdr la laisse passer et le terminal du poste copie le texte (constaté le 25/11/2026). Rien ne s'affiche, aucun pane
+  ne s'ouvre. S'il ne trouve pas ce terminal, il passe par un pane éphémère, sans focus, refermé en moins d'une seconde.
+  L'agent ne peut pas relire le presse-papier : c'est l'utilisateur qui dit si le texte est arrivé. Sur un poste ou un
+  terminal nouveau, le demander la première fois.
 - **Dire ce qui est parti** en une ligne : quoi, combien de lignes. « La liste des six articles est dans ton
   presse-papier (12 lignes). » La commande rend ce compte, jamais le contenu.
 - `--garder` : le pane « presse-papier » reste ouvert avec le texte affiché, pour qui veut voir ce qu'il va coller ;
