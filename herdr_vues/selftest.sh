@@ -26,6 +26,9 @@ check "secret suivi par git : refusé"               "! '$V' saisir '$T/fuite.tx
 printf '*.key\n' > "$T/.gitignore"
 check "secret ignoré par git : accepté"             "'$V' saisir '$T/ok.key' x --secret"
 out=$("$V" montrer "logs" tail -f /dev/null 2>&1)
+outc=$(printf 'un\ndeux\ntrois\n' | "$V" copier - --lignes 2-3 2>&1)
+check "copier : sans focus, OSC 52, compte sans contenu" "! grep -q -- '--focus' <<<\"\$outc\" && grep -q '52;c;' <<<\"\$outc\" && grep -q '2 ligne(s), 11 octets' <<<\"\$outc\" && ! grep -q deux <<<\"\$outc\""
+check "copier : un secret est refusé"                "! '$V' copier \"\$HOME/.secrets/absent-pour-le-test\""
 check "montrer : jamais de focus"                   "! grep -q -- '--focus' <<<\"\$out\" && grep -q 'rename .* logs' <<<\"\$out\""
 printf 'png' > "$T/a.png"; out=$("$V" image "photos" "$T/a.png=Une légende" "$T/a.png" 2>&1)
 check "image : pane nommé sans focus, rendu délégué"  "! grep -q -- '--focus' <<<\"\$out\" && grep -q 'rename .* photos' <<<\"\$out\" && grep -q '_rendre --lignes 18 .*a.png Une\\\\ légende .*a.png a.png' <<<\"\$out\""

@@ -1,6 +1,6 @@
 {
   "name": "herdr-vues",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Skill herdr-vues et commande vue : ce que l'utilisateur doit saisir (secrets, collages), lire (brouillons, textes longs) ou voir vivre (logs, commandes longues) s'ouvre dans un pane herdr à côté, pas dans le chat ; skill tab-question et vue question : une décision à faire trancher par l'utilisateur part dans un onglet herdr où une session Claude la pose, l'applique et rend compte.",
   "author": {
     "name": "remmmi"

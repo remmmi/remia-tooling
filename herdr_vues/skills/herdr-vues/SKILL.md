@@ -8,9 +8,11 @@ description: >
   est à relire ou corriger (brouillon de mail, d'issue, de PR, réponse à envoyer, doc, texte et son
   décodage) ; une commande longue ou un log à suivre (deploy, import, tests, tail -f, watch, sous-agent).
   Aussi sur « montre-moi en entier », « affiche », « ouvre dans nano », « ouvre en pane », « pane
-  token », « je veux voir », « surveille », « ferme les panes ». Un texte à copier tel quel (prompt à
-  coller ailleurs) : `cat` dans un pane, pas nano. Outil : commande `vue`.
-version: 1.1.1
+  token », « je veux voir », « surveille », « ferme les panes ». Aussi quand l'utilisateur demande de lui
+  COPIER un fichier, un texte ou un passage sans dire où (« copie-moi ça », « mets-le dans le
+  presse-papier », « donne-moi la liste à coller ») : `vue copier` le met dans son presse-papier.
+  Un texte à copier qu'il veut aussi voir : `vue copier --garder`. Outil : commande `vue`.
+version: 1.2.0
 ---
 
 # Vues : saisir, lire, montrer
@@ -25,6 +27,7 @@ semaines d'usage. Chacun correspond à une sous-commande de `vue` (dans le PATH 
 | **saisir** | l'utilisateur doit **fournir** un contenu : secret, collage d'un résultat obtenu ailleurs, ligne à ajouter dans un fichier | `vue saisir <fichier> "<quoi coller>" [--secret]` | oui : il doit agir |
 | **lire** | l'utilisateur doit **lire ou corriger** un texte long : brouillon, issue, PR, réponse à envoyer, texte + son décodage (s'il va seulement le copier : `cat`, voir § 3) | `vue lire <fichier> [+N] [--numeros] [--sous <fichier2>]` | oui |
 | **montrer** | quelque chose **vit dans le temps** : commande longue, log, `watch`, sous-agent | `vue montrer "<nom>" <commande…>` | **non**, jamais |
+| **copier** | l'utilisateur veut **emporter** un texte ailleurs (mail, autre outil, autre session) et ne dit pas où le mettre | `vue copier <fichier ou -> [--lignes A-B] [--garder]` | **non** |
 | **montrer une image** | une photo, une capture, un logo **à faire voir** (pas à retoucher) | `vue image "<nom>" <fichier[=légende]>… [--lignes N]` | **non** |
 
 `vue` choisit seul la géométrie (à droite au-dessus de 120 colonnes, en dessous sinon), nomme le pane,
@@ -93,7 +96,8 @@ vue lire issue.md --sous issue-traduit.md    # l'original en haut, le décodage 
 vue lire brouillon.md --numeros              # « affiche les lignes »
 ```
 
-- **À copier seulement, pas à corriger** (un prompt à coller ailleurs, une commande, un message prêt à
+- **À copier, sans autre précision** : `vue copier` (§ 4 quater), le texte part dans son presse-papier.
+- **À copier et à garder sous les yeux, pas à corriger** (un prompt à coller ailleurs, une commande, un message prêt à
   partir) : `vue montrer "<nom>" cat <fichier>`, jamais `vue lire`. C'est à moi de le deviner : « donne-moi
   un prompt » veut dire qu'il va le copier. nano capture la souris (`--mouse`) et n'affiche qu'un écran,
   ce qui gêne la sélection. Le texte reste écrit un paragraphe par ligne ; `vue fermer` une fois copié.
@@ -145,6 +149,32 @@ vue image "photos Clemence" "envois/1000000-grande.jpg=N 1 : cavalière de dos" 
 - `fichier=légende` : la légende remplace le nom du fichier au-dessus de l'image. `--lignes N` : hauteur en lignes de texte (18 par défaut), la largeur suit. Même nom qu'une vue déjà ouverte : elle est réutilisée, comme pour `montrer`.
 - Depuis Bash il n'y a pas de /dev/tty : l'agent ne peut pas demander au terminal ce qu'il sait afficher, c'est l'utilisateur qui dit si l'image apparaît. Sur un terminal inconnu, une petite image d'abord.
 - Hors de portée : retoucher ou comparer finement (ouvrir le fichier sur le poste, ou une page web). Et pas d'image dans le chat ni dans nano : nano ne rend pas le protocole.
+
+## 4 quater. Copier dans le presse-papier
+
+```bash
+vue copier docs/mail.md --lignes 12-19        # un passage d'un fichier
+vue copier - <<'EOF'                           # un texte qui n'est dans aucun fichier
+…
+EOF
+vue copier notes.md --garder                   # copié, et laissé à l'écran dans le pane « presse-papier »
+```
+
+- **Le réflexe** : quand l'utilisateur dit « copie-moi X », « donne-moi X à coller », « mets-moi X de côté » à propos
+  d'un fichier, d'un texte ou d'une portion, **sans nommer de destination**, c'est le presse-papier de son poste.
+  Pas un bloc dans le chat, pas un `cat` dans un pane : il n'a alors plus qu'à coller. S'il nomme une destination
+  (un fichier, un brouillon, un pane), on écrit là.
+- Comment ça marche : `vue` émet la séquence OSC 52 depuis un pane éphémère, sans focus, refermé en moins d'une seconde ;
+  herdr la laisse passer et le terminal du poste copie le texte (constaté le 25/11/2026). Depuis Bash il n'y a pas de
+  terminal : l'agent ne peut pas relire le presse-papier, c'est l'utilisateur qui dit si le texte est arrivé. Sur un
+  poste ou un terminal nouveau, le demander la première fois.
+- **Dire ce qui est parti** en une ligne : quoi, combien de lignes. « La liste des six articles est dans ton
+  presse-papier (12 lignes). » La commande rend ce compte, jamais le contenu.
+- `--garder` : le pane « presse-papier » reste ouvert avec le texte affiché, pour qui veut voir ce qu'il va coller ;
+  le fermer ensuite (`vue fermer`).
+- Limites : 60 000 octets au plus (au-delà, `vue montrer <nom> cat <fichier>`) ; un fichier de `~/.secrets` est refusé
+  (les gestionnaires de presse-papier gardent un historique) ; une copie remplace ce que l'utilisateur avait déjà
+  copié, donc ne pas copier sans qu'il l'ait demandé.
 
 ## 5. Ranger
 

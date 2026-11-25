@@ -7,6 +7,8 @@
 #                                                     --sous : <fichier> en haut, <fichier2> en dessous
 #   vue montrer <nom> <commande…>                     commande dans un pane nommé, sans prendre le focus ;
 #                                                     réutilise le pane <nom> s'il existe
+#   vue copier <fichier|-> [--lignes A-B] [--garder]  met le texte dans le presse-papier du poste de l'utilisateur
+#                                                     (séquence OSC 52, que herdr laisse passer) ; « - » lit l'entrée
 #   vue image <nom> <image[=légende]>… [--lignes N]   images dans un pane nommé (protocole graphique kitty,
 #                                                     que herdr laisse passer) ; converties en PNG, 1200 px max
 #   vue question <sujet> <brief> [--modele opus|sonnet] [--parent <nom>] [--espace <id>] [--cwd <dir>]
@@ -25,7 +27,7 @@
 # commandes herdr/tmux au lieu de les lancer (autotest).
 set -euo pipefail
 
-VERSION="1.1.1"
+VERSION="1.2.0"
 NANO_LIRE=(--softwrap --atblanks --mouse --indicator --smarthome --zap --minibar --stateflags)
 NANO_SAISIR=(--softwrap --atblanks --mouse)
 
@@ -286,6 +288,45 @@ cmd_montrer() {
     echo "$id"
 }
 
+# Le presse-papier du poste de l'utilisateur, par la séquence OSC 52 : le terminal qui affiche herdr copie le texte.
+# Constaté le 25/11/2026 : herdr laisse passer la séquence émise dans un pane (un agent n'a pas de terminal à lui :
+# elle part donc d'un pane éphémère, sans focus, refermé aussitôt ; --garder le laisse ouvert avec le texte affiché).
+COPIER_MAX=60000   # octets : au-delà, les terminaux tronquent ou refusent la séquence
+cmd_copier() {
+    local usage='usage : vue copier <fichier|-> [--lignes A-B] [--garder]'
+    local f="" lignes="" garder=0
+    while [ $# -gt 0 ]; do
+        case $1 in
+            --lignes) lignes=${2:-}; shift 2 || die "$usage" ;;
+            --garder) garder=1; shift ;;
+            -) f=-; shift ;;
+            -*) die "$usage" ;;
+            *) [ -z "$f" ] || die "$usage"; f=$1; shift ;;
+        esac
+    done
+    [ -n "$f" ] || die "$usage"
+    [ -z "$lignes" ] || [[ $lignes =~ ^[0-9]+(-[0-9]+)?$ ]] || die "--lignes attend A ou A-B (numéros de ligne)"
+    if [ "$f" != - ]; then
+        [ -r "$f" ] || die "illisible : $f"
+        case $(readlink -f -- "$f") in "$HOME"/.secrets/*) die "un secret ne passe pas par le presse-papier (son historique le garde) : $f" ;; esac
+    fi
+    local t; t=$(mktemp "${TMPDIR:-/tmp}/vue-copier.XXXXXX"); chmod 600 "$t"
+    if [ "$f" = - ]; then cat > "$t"; else cat -- "$f" > "$t"; fi
+    if [ -n "$lignes" ]; then sed -n "${lignes/-/,}p" "$t" > "$t.p" && mv "$t.p" "$t"; fi
+    local octets nl; octets=$(wc -c < "$t"); nl=$(wc -l < "$t")
+    [ "$octets" -gt 0 ] || { rm -f "$t"; die "rien à copier (texte vide, ou lignes hors du fichier)"; }
+    [ "$octets" -le "$COPIER_MAX" ] || { rm -f "$t"; die "$octets octets : trop long pour le presse-papier (plafond $COPIER_MAX). Montrer le fichier à la place : vue montrer <nom> cat <fichier>"; }
+    [ "$(backend)" = aucun ] && ! dry && { rm -f "$t"; die "ni herdr ni tmux : pas de terminal par où atteindre le presse-papier ; donner le texte dans le message"; }
+    local id; id=$(split "$(direction)" 0)
+    nommer "$id" "presse-papier"
+    # Le pane émet la séquence, efface le fichier de passage, puis montre le texte (--garder) ou se referme.
+    local emet="printf '\\033]52;c;%s\\a' \"\$(base64 -w0 $(q "$t"))\""
+    if [ "$garder" = 1 ]; then run "$id" "clear; $emet; cat $(q "$t"); rm -f $(q "$t"); echo; echo '[dans le presse-papier : '$nl' ligne(s), '$octets' octets]'"
+    else run "$id" "$emet; rm -f $(q "$t"); sleep 0.6; exit"; fi
+    dry && rm -f "$t"
+    echo "copié dans le presse-papier : $nl ligne(s), $octets octets$([ "$garder" = 1 ] && echo " (pane $id)")"
+}
+
 # png_depuis <source> <png> : PNG (le seul format du protocole kitty), au plus 1200 px de large, première image seule.
 png_depuis() {
     if php -r 'exit(class_exists("Imagick") ? 0 : 1);' 2>/dev/null; then
@@ -467,6 +508,7 @@ case $c in
     saisir) cmd_saisir "$@" ;;
     lire) cmd_lire "$@" ;;
     montrer) cmd_montrer "$@" ;;
+    copier) cmd_copier "$@" ;;
     image) cmd_image "$@" ;;
     question) cmd_question "$@" ;;
     _rendre) cmd__rendre "$@" ;;
@@ -476,5 +518,5 @@ case $c in
     secret) cmd_secret "$@" ;;
     nettoyer) cmd_nettoyer "$@" ;;
     --version|version) echo "vue $VERSION" ;;
-    *) sed -n '2,22p' "$0" | sed 's/^# \{0,1\}//'; [ -z "$c" ] || [ "$c" = -h ] || [ "$c" = --help ] || exit 2 ;;
+    *) sed -n '2,25p' "$0" | sed 's/^# \{0,1\}//'; [ -z "$c" ] || [ "$c" = -h ] || [ "$c" = --help ] || exit 2 ;;
 esac
