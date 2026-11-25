@@ -60,6 +60,7 @@ Ancien skill `~/.claude/skills/herdr-montrer/` : `remia-tooling migrate herdr-vu
 
 | Version | Changement |
 |---|---|
+| 1.2.2 | Après un `vue copier` réussi, le compte rendu tient en un mot (« done »). |
 | 1.2.1 | `vue copier` écrit directement dans le terminal de la session : plus de pane qui clignote (le pane éphémère reste en secours, `--garder` l'ouvre toujours). |
 | 1.2.0 | `vue copier` : un fichier, un texte ou un passage dans le presse-papier du poste de l'utilisateur (OSC 52, que herdr laisse passer), par un pane éphémère ; le skill le prend quand l'utilisateur demande de copier sans dire où. |
 | 1.1.1 | Consigne de l'onglet-question : un geste qui sort de la machine part aussi quand le CLAUDE.md ou la mémoire l'autorisent déjà (cité dans le compte rendu) ; constaté au premier usage réel le 15/11/2026 (un push autorisé par la mémoire laissé au parent). Décision de l'utilisateur le 15/11. |

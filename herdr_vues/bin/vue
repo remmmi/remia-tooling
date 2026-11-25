@@ -27,7 +27,7 @@
 # commandes herdr/tmux au lieu de les lancer (autotest).
 set -euo pipefail
 
-VERSION="1.2.1"
+VERSION="1.2.2"
 NANO_LIRE=(--softwrap --atblanks --mouse --indicator --smarthome --zap --minibar --stateflags)
 NANO_SAISIR=(--softwrap --atblanks --mouse)
 

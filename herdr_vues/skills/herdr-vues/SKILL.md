@@ -12,7 +12,7 @@ description: >
   COPIER un fichier, un texte ou un passage sans dire où (« copie-moi ça », « mets-le dans le
   presse-papier », « donne-moi la liste à coller ») : `vue copier` le met dans son presse-papier.
   Un texte à copier qu'il veut aussi voir : `vue copier --garder`. Outil : commande `vue`.
-version: 1.2.1
+version: 1.2.2
 ---
 
 # Vues : saisir, lire, montrer
@@ -169,8 +169,9 @@ vue copier notes.md --garder                   # copié, et laissé à l'écran 
   ne s'ouvre. S'il ne trouve pas ce terminal, il passe par un pane éphémère, sans focus, refermé en moins d'une seconde.
   L'agent ne peut pas relire le presse-papier : c'est l'utilisateur qui dit si le texte est arrivé. Sur un poste ou un
   terminal nouveau, le demander la première fois.
-- **Dire ce qui est parti** en une ligne : quoi, combien de lignes. « La liste des six articles est dans ton
-  presse-papier (12 lignes). » La commande rend ce compte, jamais le contenu.
+- **Compte rendu : un mot.** Après une copie réussie, répondre « done » (ou « copié ») et rien d'autre : ni ce qui est
+  parti, ni le nombre de lignes, ni comment ça marche, ni question de vérification. L'utilisateur a demandé une copie,
+  il colle. On ne développe que si la copie a échoué ou si on a copié autre chose que ce qu'il demandait.
 - `--garder` : le pane « presse-papier » reste ouvert avec le texte affiché, pour qui veut voir ce qu'il va coller ;
   le fermer ensuite (`vue fermer`).
 - Limites : 60 000 octets au plus (au-delà, `vue montrer <nom> cat <fichier>`) ; un fichier de `~/.secrets` est refusé
